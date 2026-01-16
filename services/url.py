@@ -5,7 +5,7 @@ from models.url import URL
 
 
 class URLService:
-    BASE_URL = "http://localhost:8000/"
+    URL_BASE = "https://localhost:8000/"
 
     def shorten_url(self, original_url: str, db: Session) -> str:
         #Salva no banco de dados
@@ -19,10 +19,10 @@ class URLService:
         db.commit()
         db.refresh(url_model)
         #retorna a url encurtada
-        return self.BASE_URL + short_code
+        return self.URL_BASE + short_code
 
-    def get_original_url(self, short_url: str, db: Session) -> str:
-        url = db.query(URL).filter(URL.short_code == short_url).first()
+    def get_original_url(self, short_code: str, db: Session) -> str:
+        url = db.query(URL).filter(URL.short_code == short_code).first()
 
         if not url:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="URL not found")
@@ -31,3 +31,19 @@ class URLService:
         db.commit()
 
         return url.original_url
+
+
+    def get_url_stats(self, short_code: str, db: Session) -> dict:
+
+        url = db.query(URL).filter(URL.short_code == short_code).first()
+
+        if not url:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="URL not found")
+
+        status =  {
+            "original_url": url.original_url,
+            "short_url": url.short_code,
+            "click_count": url.click_count
+        }
+
+        return status

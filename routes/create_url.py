@@ -17,7 +17,13 @@ def create_url(url_create: URLCreate, db: Session = Depends(get_db)):
     return base_url
 
 
-@router.get("/{short_url}")
-def redirect_url(short_url: str, db: Session = Depends(get_db)):
-    original_url = URLService().get_original_url(short_url, db)
+@router.get("/{short_code}")
+def redirect_url(short_code: str, db: Session = Depends(get_db)):
+    original_url = URLService().get_original_url(short_code, db)
     return RedirectResponse(url=original_url)
+
+
+@router.get("/stats/{short_code}")
+def get_url_stats(short_code: str, db: Session = Depends(get_db)):
+    stats = URLService().get_url_stats(short_code, db)
+    return stats
