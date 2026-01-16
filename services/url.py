@@ -77,13 +77,31 @@ class URLService:
         )
 
     def get_original_url(self, short_code: str, db: Session) -> str:
+        """
+        Recupera a URL original a partir do short_code e incrementa o contador de cliques.
+        
+        Args:
+            short_code: Código curto da URL
+            db: Sessão do banco de dados
+            
+        Returns:
+            URL original
+            
+        Raises:
+            HTTPException: Se a URL não for encontrada ou ocorrer erro ao atualizar
+        """
         url = db.query(URL).filter(URL.short_code == short_code).first()
 
         if not url:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="URL not found")
         
-        url.click_count += 1
-        db.commit()
+        try:
+            url.click_count += 1
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Erro ao incrementar click_count para {short_code}: {str(e)}")
+            # Continua mesmo se falhar o incremento, retorna a URL original
 
         return url.original_url
 
