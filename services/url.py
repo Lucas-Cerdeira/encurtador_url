@@ -1,11 +1,17 @@
 from nanoid import generate
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 from models.url import URL
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class URLService:
     URL_BASE = "https://localhost:8000/"
+    MAX_RETRIES = 5  # Número máximo de tentativas em caso de colisão
+    SHORT_CODE_SIZE = 8  # Tamanho do código curto
 
     def shorten_url(self, original_url: str, db: Session) -> str:
         #Salva no banco de dados
