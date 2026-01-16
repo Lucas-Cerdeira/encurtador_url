@@ -8,12 +8,15 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [0.0.1] - 2024-01-15
 
 ### Adicionado
-- Sistema de tratamento de colisões de short_code com retry automático
+- Sistema de tratamento de colisões de short_code com retry automático (até 5 tentativas)
 - Logging básico para rastreamento de operações
 - Tratamento robusto de erros com rollback em operações de banco de dados
 - Documentação de métodos no serviço de URLs
-- Sistema de versionamento do projeto
+- Sistema de versionamento do projeto (arquivo `__version__.py`)
+- Documento de padrões de versionamento (`docs/VERSIONAMENTO.md`)
 - Estrutura de documentação (changelogs e features)
+- Metadata da API FastAPI (title, version, description)
+- Constantes configuráveis (`MAX_RETRIES=5`, `SHORT_CODE_SIZE=8`)
 - Endpoint para criação de URLs encurtadas (`POST /create-url`)
 - Endpoint para redirecionamento de URLs (`GET /{short_code}`)
 - Endpoint para estatísticas de URLs (`GET /stats/{short_code}`)
