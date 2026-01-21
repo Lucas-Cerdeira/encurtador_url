@@ -4,12 +4,13 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 from models.url import URL
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 
 class URLService:
-    URL_BASE = "https://localhost:8000/"
+    URL_BASE = os.getenv("URL_BASE", "http://localhost:8000/")
     MAX_RETRIES = 5  # Número máximo de tentativas em caso de colisão
     SHORT_CODE_SIZE = 8  # Tamanho do código curto
 

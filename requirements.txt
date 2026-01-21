@@ -12,6 +12,7 @@ nanoid==2.0.0
 pydantic==2.12.5
 pydantic_core==2.41.5
 pytest==8.3.4
+python-dotenv==1.0.1
 SQLAlchemy==2.0.45
 starlette==0.50.0
 typing-inspection==0.4.2

@@ -4,6 +4,10 @@ from database import engine, Base
 from models.url import URL  # Import necessário para registrar o modelo
 from __version__ import __version__
 import logging
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente do arquivo .env
+load_dotenv()
 
 # Configurar logging básico
 logging.basicConfig(
