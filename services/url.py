@@ -121,3 +121,124 @@ class URLService:
         }
 
         return status
+
+    def list_urls(self, db: Session, page: int = 1, page_size: int = 10) -> dict:
+        """
+        Lista todas as URLs com paginação.
+        
+        Args:
+            db: Sessão do banco de dados
+            page: Número da página (começa em 1)
+            page_size: Quantidade de itens por página
+            
+        Returns:
+            Dicionário com total, página atual, tamanho da página e lista de URLs
+            
+        Raises:
+            HTTPException: Se os parâmetros de paginação forem inválidos
+        """
+        if page < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Número da página deve ser maior ou igual a 1"
+            )
+        
+        if page_size < 1 or page_size > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tamanho da página deve estar entre 1 e 100"
+            )
+        
+        # Conta o total de URLs
+        total = db.query(URL).count()
+        
+        # Calcula o offset
+        offset = (page - 1) * page_size
+        
+        # Busca as URLs com paginação
+        urls = db.query(URL).order_by(URL.created_at.desc()).offset(offset).limit(page_size).all()
+        
+        logger.info(f"Listagem de URLs: página {page}, tamanho {page_size}, total {total}")
+        
+        return {
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "urls": urls
+        }
+
+    def update_url(self, url_id: int, original_url: str, db: Session) -> URL:
+        """
+        Atualiza a URL original de uma URL encurtada.
+        
+        Args:
+            url_id: ID da URL a ser atualizada
+            original_url: Nova URL original
+            db: Sessão do banco de dados
+            
+        Returns:
+            Objeto URL atualizado
+            
+        Raises:
+            HTTPException: Se a URL não for encontrada ou ocorrer erro ao atualizar
+        """
+        url = db.query(URL).filter(URL.id == url_id).first()
+        
+        if not url:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"URL com ID {url_id} não encontrada"
+            )
+        
+        try:
+            url.original_url = str(original_url)
+            db.commit()
+            db.refresh(url)
+            
+            logger.info(f"URL {url_id} atualizada com sucesso")
+            return url
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Erro ao atualizar URL {url_id}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro interno ao atualizar a URL"
+            )
+
+    def delete_url(self, url_id: int, db: Session) -> dict:
+        """
+        Remove uma URL encurtada do banco de dados.
+        
+        Args:
+            url_id: ID da URL a ser removida
+            db: Sessão do banco de dados
+            
+        Returns:
+            Dicionário com mensagem de sucesso
+            
+        Raises:
+            HTTPException: Se a URL não for encontrada ou ocorrer erro ao deletar
+        """
+        url = db.query(URL).filter(URL.id == url_id).first()
+        
+        if not url:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"URL com ID {url_id} não encontrada"
+            )
+        
+        try:
+            db.delete(url)
+            db.commit()
+            
+            logger.info(f"URL {url_id} deletada com sucesso")
+            return {"message": f"URL {url_id} deletada com sucesso"}
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Erro ao deletar URL {url_id}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro interno ao deletar a URL"
+            )
