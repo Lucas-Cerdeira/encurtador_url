@@ -188,3 +188,30 @@ def test_update_url_not_found(db_session):
     
     assert exc.value.status_code == 404
     assert "999" in exc.value.detail
+
+
+def test_delete_url_success(db_session):
+    url = URL(original_url="https://example.com", short_code="abc123")
+    db_session.add(url)
+    db_session.commit()
+    url_id = url.id
+    
+    service = URLService()
+    result = service.delete_url(url_id, db_session)
+    
+    assert "message" in result
+    assert str(url_id) in result["message"]
+    
+    # Verifica que a URL foi deletada
+    deleted = db_session.query(URL).filter(URL.id == url_id).first()
+    assert deleted is None
+
+
+def test_delete_url_not_found(db_session):
+    service = URLService()
+    
+    with pytest.raises(HTTPException) as exc:
+        service.delete_url(999, db_session)
+    
+    assert exc.value.status_code == 404
+    assert "999" in exc.value.detail

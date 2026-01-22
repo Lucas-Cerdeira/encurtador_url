@@ -56,6 +56,20 @@ def update_url(
     return updated_url
 
 
+@router.delete("/urls/{url_id}")
+def delete_url(
+    url_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Remove uma URL encurtada do banco de dados.
+    
+    - **url_id**: ID da URL a ser removida
+    """
+    result = URLService().delete_url(url_id, db)
+    return result
+
+
 @router.get("/stats/{short_code}")
 def get_url_stats(short_code: str, db: Session = Depends(get_db)):
     stats = URLService().get_url_stats(short_code, db)

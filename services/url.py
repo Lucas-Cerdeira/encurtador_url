@@ -205,3 +205,40 @@ class URLService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Erro interno ao atualizar a URL"
             )
+
+    def delete_url(self, url_id: int, db: Session) -> dict:
+        """
+        Remove uma URL encurtada do banco de dados.
+        
+        Args:
+            url_id: ID da URL a ser removida
+            db: Sessão do banco de dados
+            
+        Returns:
+            Dicionário com mensagem de sucesso
+            
+        Raises:
+            HTTPException: Se a URL não for encontrada ou ocorrer erro ao deletar
+        """
+        url = db.query(URL).filter(URL.id == url_id).first()
+        
+        if not url:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"URL com ID {url_id} não encontrada"
+            )
+        
+        try:
+            db.delete(url)
+            db.commit()
+            
+            logger.info(f"URL {url_id} deletada com sucesso")
+            return {"message": f"URL {url_id} deletada com sucesso"}
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Erro ao deletar URL {url_id}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro interno ao deletar a URL"
+            )

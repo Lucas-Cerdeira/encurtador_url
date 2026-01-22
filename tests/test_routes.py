@@ -149,3 +149,28 @@ def test_update_url_route_no_data(client, db_session):
     response = client.patch(f"/urls/{url_id}", json=payload)
     
     assert response.status_code == 400
+
+
+def test_delete_url_route_success(client, db_session):
+    url = URL(original_url="https://example.com", short_code="abc123")
+    db_session.add(url)
+    db_session.commit()
+    url_id = url.id
+    
+    response = client.delete(f"/urls/{url_id}")
+    
+    assert response.status_code == 200
+    
+    data = response.json()
+    assert "message" in data
+    assert str(url_id) in data["message"]
+    
+    # Verifica que a URL foi deletada
+    deleted = db_session.query(URL).filter(URL.id == url_id).first()
+    assert deleted is None
+
+
+def test_delete_url_route_not_found(client):
+    response = client.delete("/urls/999")
+    
+    assert response.status_code == 404
