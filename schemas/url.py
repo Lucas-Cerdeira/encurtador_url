@@ -1,4 +1,5 @@
 from pydantic import BaseModel, HttpUrl, ConfigDict
+from typing import Optional
 from datetime import datetime
 
 
@@ -9,6 +10,9 @@ class URLBase(BaseModel):
 
 class URLCreate(BaseModel):
     original_url: HttpUrl
+
+class URLUpdate(BaseModel):
+    original_url: Optional[HttpUrl] = None
 
 class URLResponse(BaseModel):
     id: int

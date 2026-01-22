@@ -166,3 +166,42 @@ class URLService:
             "page_size": page_size,
             "urls": urls
         }
+
+    def update_url(self, url_id: int, original_url: str, db: Session) -> URL:
+        """
+        Atualiza a URL original de uma URL encurtada.
+        
+        Args:
+            url_id: ID da URL a ser atualizada
+            original_url: Nova URL original
+            db: Sessão do banco de dados
+            
+        Returns:
+            Objeto URL atualizado
+            
+        Raises:
+            HTTPException: Se a URL não for encontrada ou ocorrer erro ao atualizar
+        """
+        url = db.query(URL).filter(URL.id == url_id).first()
+        
+        if not url:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"URL com ID {url_id} não encontrada"
+            )
+        
+        try:
+            url.original_url = str(original_url)
+            db.commit()
+            db.refresh(url)
+            
+            logger.info(f"URL {url_id} atualizada com sucesso")
+            return url
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Erro ao atualizar URL {url_id}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro interno ao atualizar a URL"
+            )

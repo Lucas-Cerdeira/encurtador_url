@@ -164,3 +164,27 @@ def test_list_urls_invalid_page_size(db_session):
         service.list_urls(db_session, page=1, page_size=0)
     
     assert exc.value.status_code == 400
+
+
+def test_update_url_success(db_session):
+    url = URL(original_url="https://example.com", short_code="abc123")
+    db_session.add(url)
+    db_session.commit()
+    url_id = url.id
+    
+    service = URLService()
+    updated = service.update_url(url_id, "https://newexample.com", db_session)
+    
+    assert updated.id == url_id
+    assert updated.original_url == "https://newexample.com"
+    assert updated.short_code == "abc123"
+
+
+def test_update_url_not_found(db_session):
+    service = URLService()
+    
+    with pytest.raises(HTTPException) as exc:
+        service.update_url(999, "https://newexample.com", db_session)
+    
+    assert exc.value.status_code == 404
+    assert "999" in exc.value.detail

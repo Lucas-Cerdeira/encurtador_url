@@ -2,7 +2,7 @@ from fastapi.routing import APIRouter
 from fastapi.responses import RedirectResponse
 from fastapi import Depends, Query
 from sqlalchemy.orm import Session
-from schemas.url import URL, URLCreate, URLListResponse
+from schemas.url import URL, URLCreate, URLListResponse, URLUpdate, URLResponse
 from services.url import URLService
 from database import get_db
 
@@ -31,6 +31,29 @@ def list_urls(
     """
     result = URLService().list_urls(db, page, page_size)
     return result
+
+
+@router.patch("/urls/{url_id}", response_model=URLResponse)
+def update_url(
+    url_id: int,
+    url_update: URLUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Atualiza a URL original de uma URL encurtada.
+    
+    - **url_id**: ID da URL a ser atualizada
+    - **original_url**: Nova URL original
+    """
+    if url_update.original_url is None:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="É necessário fornecer a nova URL original"
+        )
+    
+    updated_url = URLService().update_url(url_id, url_update.original_url, db)
+    return updated_url
 
 
 @router.get("/stats/{short_code}")
