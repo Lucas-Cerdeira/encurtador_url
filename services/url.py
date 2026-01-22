@@ -121,3 +121,48 @@ class URLService:
         }
 
         return status
+
+    def list_urls(self, db: Session, page: int = 1, page_size: int = 10) -> dict:
+        """
+        Lista todas as URLs com paginação.
+        
+        Args:
+            db: Sessão do banco de dados
+            page: Número da página (começa em 1)
+            page_size: Quantidade de itens por página
+            
+        Returns:
+            Dicionário com total, página atual, tamanho da página e lista de URLs
+            
+        Raises:
+            HTTPException: Se os parâmetros de paginação forem inválidos
+        """
+        if page < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Número da página deve ser maior ou igual a 1"
+            )
+        
+        if page_size < 1 or page_size > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tamanho da página deve estar entre 1 e 100"
+            )
+        
+        # Conta o total de URLs
+        total = db.query(URL).count()
+        
+        # Calcula o offset
+        offset = (page - 1) * page_size
+        
+        # Busca as URLs com paginação
+        urls = db.query(URL).order_by(URL.created_at.desc()).offset(offset).limit(page_size).all()
+        
+        logger.info(f"Listagem de URLs: página {page}, tamanho {page_size}, total {total}")
+        
+        return {
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "urls": urls
+        }

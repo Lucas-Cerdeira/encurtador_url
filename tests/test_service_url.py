@@ -87,3 +87,80 @@ def test_get_url_stats(db_session):
     assert stats["original_url"] == "https://example.com"
     assert stats["short_url"] == "abc123"
     assert stats["click_count"] == 5
+
+
+def test_list_urls_empty(db_session):
+    service = URLService()
+    result = service.list_urls(db_session, page=1, page_size=10)
+    
+    assert result["total"] == 0
+    assert result["page"] == 1
+    assert result["page_size"] == 10
+    assert result["urls"] == []
+
+
+def test_list_urls_with_data(db_session):
+    # Adiciona 3 URLs
+    urls = [
+        URL(original_url="https://example1.com", short_code="abc1"),
+        URL(original_url="https://example2.com", short_code="abc2"),
+        URL(original_url="https://example3.com", short_code="abc3"),
+    ]
+    for url in urls:
+        db_session.add(url)
+    db_session.commit()
+
+    service = URLService()
+    result = service.list_urls(db_session, page=1, page_size=10)
+    
+    assert result["total"] == 3
+    assert result["page"] == 1
+    assert result["page_size"] == 10
+    assert len(result["urls"]) == 3
+
+
+def test_list_urls_pagination(db_session):
+    # Adiciona 5 URLs
+    for i in range(5):
+        db_session.add(URL(original_url=f"https://example{i}.com", short_code=f"abc{i}"))
+    db_session.commit()
+
+    service = URLService()
+    
+    # Página 1 com 2 itens
+    result_page1 = service.list_urls(db_session, page=1, page_size=2)
+    assert result_page1["total"] == 5
+    assert len(result_page1["urls"]) == 2
+    
+    # Página 2 com 2 itens
+    result_page2 = service.list_urls(db_session, page=2, page_size=2)
+    assert len(result_page2["urls"]) == 2
+    
+    # Página 3 com 2 itens (deve ter apenas 1)
+    result_page3 = service.list_urls(db_session, page=3, page_size=2)
+    assert len(result_page3["urls"]) == 1
+
+
+def test_list_urls_invalid_page(db_session):
+    service = URLService()
+    
+    with pytest.raises(HTTPException) as exc:
+        service.list_urls(db_session, page=0, page_size=10)
+    
+    assert exc.value.status_code == 400
+
+
+def test_list_urls_invalid_page_size(db_session):
+    service = URLService()
+    
+    # page_size muito grande
+    with pytest.raises(HTTPException) as exc:
+        service.list_urls(db_session, page=1, page_size=200)
+    
+    assert exc.value.status_code == 400
+    
+    # page_size zero
+    with pytest.raises(HTTPException) as exc:
+        service.list_urls(db_session, page=1, page_size=0)
+    
+    assert exc.value.status_code == 400
