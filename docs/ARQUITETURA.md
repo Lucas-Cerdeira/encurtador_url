@@ -156,7 +156,47 @@ Contém a lógica de negócio da aplicação.
 
 ---
 
-### 6. Routes Layer (`routes/`)
+### 6. Utils Layer (`utils/`)
+
+Contém utilitários e helpers reutilizáveis.
+
+**HashGenerator:**
+
+Gerador de hash customizado usando Base 62 para criação de códigos curtos únicos.
+
+**Características:**
+- **Base 62**: Alfabeto com 62 caracteres (A-Z, a-z, 0-9)
+- **Tamanho configurável**: 1 a 6 caracteres (padrão: 6)
+- **Segurança**: Usa `secrets.SystemRandom()` para geração criptograficamente segura
+- **Validação**: Método para validar formato de hash
+- **Escalável**: Fácil extensão para outros algoritmos
+
+**Métodos Principais:**
+
+| Método | Descrição |
+|--------|-----------|
+| `generate(size)` | Gera hash aleatório de tamanho especificado |
+| `validate(hash_code)` | Valida se hash está no formato correto |
+| `get_max_combinations(size)` | Calcula combinações máximas para um tamanho |
+| `get_alphabet()` | Retorna alfabeto Base 62 usado |
+
+**Exemplo:**
+```python
+from utils.hash_generator import HashGenerator
+
+generator = HashGenerator(default_size=6)
+hash_code = generator.generate()  # Ex: "aB3xY9"
+is_valid = generator.validate("aB3xY9")  # True
+```
+
+**Estatísticas:**
+- **6 caracteres**: 62^6 = 56.800.235.584 combinações
+- **Probabilidade de colisão**: Extremamente baixa
+- **Retry automático**: Implementado no `URLService` em caso de colisão
+
+---
+
+### 7. Routes Layer (`routes/`)
 
 Define os endpoints da API REST.
 
@@ -191,7 +231,7 @@ def list_urls(
              ↓
 3. URLService.shorten_url()
              ↓
-4. Gera short_code (NanoID)
+4. Gera short_code (HashGenerator - Base 62)
              ↓
 5. Tenta salvar no banco
    ├─ Sucesso → Retorna URL encurtada
@@ -241,24 +281,34 @@ CREATE INDEX idx_original_url ON urls(original_url);
 
 ## Geração de Short Code
 
-### Algoritmo: NanoID
+### Algoritmo: HashGenerator (Base 62)
 
 **Características:**
-- Tamanho: 8 caracteres
-- Alfabeto: URL-safe (A-Za-z0-9_-)
-- Colisão: ~2.3 milhões de IDs necessários para 1% de chance de colisão
+- Tamanho: 6 caracteres (configurável entre 1-6)
+- Alfabeto: Base 62 (A-Z, a-z, 0-9) = 62 caracteres
+- Combinações: 62^6 = **56.800.235.584** combinações possíveis
+- Colisão: Probabilidade extremamente baixa (1 em 56 bilhões)
+- Segurança: Geração criptograficamente segura usando `secrets.SystemRandom()`
 
 **Implementação:**
 ```python
-from nanoid import generate
+from utils.hash_generator import HashGenerator
 
-short_code = generate(size=8)  # Ex: "V1StGXR8"
+generator = HashGenerator(default_size=6)
+short_code = generator.generate()  # Ex: "aB3xY9"
 ```
 
 **Tratamento de Colisão:**
 - Retry automático até 5 tentativas
 - Rollback de transação em caso de `IntegrityError`
 - Log de warnings para monitoramento
+- Exception `ShortCodeGenerationError` após esgotar tentativas
+
+**Vantagens:**
+- ✅ Mais curto (6 vs 8 caracteres)
+- ✅ Alfabeto mais simples (sem caracteres especiais)
+- ✅ Escalável e extensível
+- ✅ Validação integrada
 
 ---
 

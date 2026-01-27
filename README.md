@@ -21,7 +21,7 @@ API REST para encurtamento de URLs com estatísticas, construída com FastAPI e 
 ## 🎯 Visão Geral
 
 Este projeto é um encurtador de URLs que permite:
-- Criar URLs encurtadas com códigos únicos
+- Criar URLs encurtadas com códigos únicos (hash de 6 caracteres, Base 62)
 - Redirecionar para URLs originais
 - Rastrear estatísticas de cliques
 - Gerenciar URLs (CRUD completo)
@@ -39,7 +39,7 @@ Este projeto é um encurtador de URLs que permite:
 - **Pydantic** - Validação de dados
 - **SQLite** - Banco de dados (desenvolvimento)
 - **Pytest** - Framework de testes
-- **NanoID** - Geração de IDs únicos
+- **HashGenerator** - Geração de hash Base 62 (A-Z, a-z, 0-9)
 - **python-dotenv** - Gerenciamento de variáveis de ambiente
 
 ---
@@ -60,6 +60,9 @@ encurtador_url/
 ├── services/           # Lógica de negócio
 │   ├── __init__.py
 │   └── url.py          # Serviço de URLs
+├── utils/              # Utilitários
+│   ├── __init__.py
+│   └── hash_generator.py  # Gerador de hash Base 62
 ├── routes/             # Rotas da API
 │   ├── __init__.py
 │   └── create_url.py   # Endpoints de URLs
@@ -67,7 +70,8 @@ encurtador_url/
 │   ├── __init__.py
 │   ├── conftest.py     # Fixtures do pytest
 │   ├── test_routes.py  # Testes de rotas
-│   └── test_service_url.py  # Testes de serviço
+│   ├── test_service_url.py  # Testes de serviço
+│   └── test_hash_generator.py  # Testes do gerador de hash
 ├── docs/               # Documentação
 │   ├── CHANGELOG.md
 │   └── VERSIONAMENTO.md
@@ -184,8 +188,10 @@ POST /create-url
 
 **Response:** `200 OK`
 ```json
-"http://localhost:8000/abc12345"
+"http://localhost:8000/aB3xY9"
 ```
+
+**Nota:** O `short_code` gerado tem **6 caracteres** usando Base 62 (A-Z, a-z, 0-9), totalizando **56.800.235.584 combinações possíveis**.
 
 ---
 
@@ -235,7 +241,7 @@ GET /urls?page=1&page_size=10
     {
       "id": 1,
       "original_url": "https://example.com",
-      "short_code": "abc12345",
+      "short_code": "aB3xY9",
       "click_count": 42,
       "created_at": "2026-01-22T10:30:00"
     }
@@ -306,7 +312,7 @@ DELETE /urls/{url_id}
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
 | `id` | Integer | ID único (chave primária) |
-| `short_code` | String | Código curto único (8 caracteres) |
+| `short_code` | String | Código curto único (6 caracteres, Base 62) |
 | `original_url` | String | URL original completa |
 | `click_count` | Integer | Contador de cliques (padrão: 0) |
 | `created_at` | DateTime | Data/hora de criação |
@@ -315,6 +321,50 @@ DELETE /urls/{url_id}
 - `id` (primário)
 - `short_code` (único)
 - `original_url`
+
+---
+
+## 🔐 Geração de Hash (HashGenerator)
+
+O projeto utiliza um gerador de hash customizado baseado em **Base 62** para criar códigos curtos únicos.
+
+### Características
+
+- **Alfabeto Base 62**: A-Z (26 maiúsculas) + a-z (26 minúsculas) + 0-9 (10 números) = 62 caracteres
+- **Tamanho**: 6 caracteres (configurável entre 1-6)
+- **Combinações possíveis**: 62^6 = **56.800.235.584** combinações
+- **Segurança**: Usa `secrets.SystemRandom()` para geração criptograficamente segura
+- **Validação**: Método `validate()` para verificar formato de hash
+
+### Uso
+
+```python
+from utils.hash_generator import HashGenerator
+
+# Criar gerador com tamanho padrão (6 caracteres)
+generator = HashGenerator()
+
+# Gerar hash
+hash_code = generator.generate()  # Ex: "aB3xY9"
+
+# Gerar hash com tamanho customizado
+hash_code = generator.generate(size=4)  # Ex: "xY9z"
+
+# Validar hash
+is_valid = generator.validate("aB3xY9")  # True
+is_valid = generator.validate("aB3-xY9")  # False (contém caractere inválido)
+
+# Calcular combinações máximas
+max_combinations = HashGenerator.get_max_combinations(6)  # 56800235584
+```
+
+### Escalabilidade
+
+O `HashGenerator` foi projetado para ser escalável:
+- Fácil troca de tamanho (1-6 caracteres)
+- Possibilidade de extensão para outros algoritmos
+- Validação robusta de entrada
+- Testes completos (16 testes unitários)
 
 ---
 
@@ -327,6 +377,7 @@ O projeto possui cobertura completa de testes unitários:
 - **`tests/conftest.py`**: Fixtures compartilhadas (banco em memória, cliente de teste)
 - **`tests/test_routes.py`**: Testes de endpoints (integração)
 - **`tests/test_service_url.py`**: Testes de lógica de negócio
+- **`tests/test_hash_generator.py`**: Testes do gerador de hash (16 testes)
 
 ### Banco de Dados de Teste
 
@@ -344,6 +395,7 @@ Testes cobrem:
 - ✅ Listagem (vazia, com dados, paginação, validação)
 - ✅ Atualização (sucesso, 404, validação)
 - ✅ Deleção (sucesso, 404, verificação de remoção)
+- ✅ Geração de hash (Base 62, validação, casos extremos)
 
 ---
 
