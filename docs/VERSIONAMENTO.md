@@ -207,7 +207,8 @@ Nova versão: 1.3.0 (MINOR tem prioridade)
 | Versão | Data | Descrição |
 |--------|------|-----------|
 | 0.0.1 | 2024-01-15 | Versão inicial com funcionalidades básicas |
+| 0.1.0 | 2026-01-27 | CRUD completo, tratamento de erros padronizado, HashGenerator Base 62 |
 
 ---
 
-**Última atualização:** 2024-01-15
+**Última atualização:** 2026-01-27

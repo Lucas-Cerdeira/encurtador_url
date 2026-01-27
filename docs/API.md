@@ -49,24 +49,30 @@ Content-Type: application/json
 
 **Response Success:** `200 OK`
 ```json
-"http://localhost:8000/abc12345"
+"http://localhost:8000/aB3xY9"
 ```
+
+**Nota:** O `short_code` gerado tem **6 caracteres** usando Base 62 (A-Z, a-z, 0-9), totalizando **56.800.235.584 combinações possíveis**.
 
 **Response Error:** `422 Unprocessable Entity`
 ```json
 {
-  "detail": [
-    {
-      "loc": ["body", "original_url"],
-      "msg": "invalid or missing URL scheme",
-      "type": "url_scheme"
-    }
-  ]
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Erro de validação nos dados fornecidos",
+    "details": [
+      {
+        "field": "body.original_url",
+        "message": "Input should be a valid URL, relative URL without a base",
+        "type": "url_parsing"
+      }
+    ]
+  }
 }
 ```
 
 **Comportamento:**
-- Gera um `short_code` único de 8 caracteres usando NanoID
+- Gera um `short_code` único de 6 caracteres usando HashGenerator (Base 62)
 - Implementa retry automático em caso de colisão (até 5 tentativas)
 - Retorna a URL completa encurtada
 
@@ -92,7 +98,10 @@ Location: https://example.com/very/long/url/path
 **Response Error:** `404 Not Found`
 ```json
 {
-  "detail": "URL not found"
+  "error": {
+    "code": "URL_NOT_FOUND",
+    "message": "URL short_code 'abc123' não encontrada"
+  }
 }
 ```
 
@@ -127,7 +136,10 @@ GET /stats/{short_code}
 **Response Error:** `404 Not Found`
 ```json
 {
-  "detail": "URL not found"
+  "error": {
+    "code": "URL_NOT_FOUND",
+    "message": "URL short_code 'abc123' não encontrada"
+  }
 }
 ```
 
@@ -161,14 +173,14 @@ GET /urls?page=2&page_size=20
     {
       "id": 21,
       "original_url": "https://example.com",
-      "short_code": "abc12345",
+      "short_code": "aB3xY9",
       "click_count": 42,
       "created_at": "2026-01-22T10:30:00"
     },
     {
       "id": 22,
       "original_url": "https://another.com",
-      "short_code": "def67890",
+      "short_code": "xY9zA1",
       "click_count": 15,
       "created_at": "2026-01-22T11:45:00"
     }
@@ -238,14 +250,20 @@ Content-Type: application/json
 **Response Error:** `404 Not Found`
 ```json
 {
-  "detail": "URL com ID 999 não encontrada"
+  "error": {
+    "code": "URL_NOT_FOUND",
+    "message": "URL ID 999 não encontrada"
+  }
 }
 ```
 
 **Response Error:** `400 Bad Request`
 ```json
 {
-  "detail": "É necessário fornecer a nova URL original"
+  "error": {
+    "code": "MISSING_FIELD",
+    "message": "Campo obrigatório 'original_url' não fornecido"
+  }
 }
 ```
 
@@ -278,7 +296,10 @@ DELETE /urls/{url_id}
 **Response Error:** `404 Not Found`
 ```json
 {
-  "detail": "URL com ID 999 não encontrada"
+  "error": {
+    "code": "URL_NOT_FOUND",
+    "message": "URL ID 999 não encontrada"
+  }
 }
 ```
 
@@ -305,60 +326,83 @@ DELETE /urls/{url_id}
 
 ### Estrutura de Erro Padrão
 
-Todos os erros seguem a estrutura do FastAPI:
+Todos os erros seguem um formato padronizado com código e mensagem:
 
+**Erros de API (400, 404, 500):**
 ```json
 {
-  "detail": "Mensagem de erro descritiva"
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Mensagem de erro descritiva"
+  }
 }
 ```
 
-ou para erros de validação:
-
+**Erros de Validação (422):**
 ```json
 {
-  "detail": [
-    {
-      "loc": ["body", "campo"],
-      "msg": "descrição do erro",
-      "type": "tipo_do_erro"
-    }
-  ]
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Erro de validação nos dados fornecidos",
+    "details": [
+      {
+        "field": "body.original_url",
+        "message": "Input should be a valid URL",
+        "type": "url_parsing"
+      }
+    ]
+  }
 }
 ```
+
+### Códigos de Erro
+
+| Código | Descrição | Status HTTP |
+|--------|-----------|-------------|
+| `URL_NOT_FOUND` | URL não encontrada | 404 |
+| `INVALID_PAGINATION` | Parâmetros de paginação inválidos | 400 |
+| `MISSING_FIELD` | Campo obrigatório ausente | 400 |
+| `SHORT_CODE_GENERATION_FAILED` | Falha ao gerar código único | 500 |
+| `DATABASE_ERROR` | Erro no banco de dados | 500 |
+| `VALIDATION_ERROR` | Erro de validação de dados | 422 |
+| `INTERNAL_SERVER_ERROR` | Erro interno não tratado | 500 |
 
 ### Tipos Comuns de Erro
 
-**URL Inválida:**
+**URL Não Encontrada:**
 ```json
 {
-  "detail": [
-    {
-      "loc": ["body", "original_url"],
-      "msg": "invalid or missing URL scheme",
-      "type": "url_scheme"
-    }
-  ]
+  "error": {
+    "code": "URL_NOT_FOUND",
+    "message": "URL short_code 'abc123' não encontrada"
+  }
 }
 ```
 
-**Recurso Não Encontrado:**
+**Campo Obrigatório Ausente:**
 ```json
 {
-  "detail": "URL not found"
+  "error": {
+    "code": "MISSING_FIELD",
+    "message": "Campo obrigatório 'original_url' não fornecido"
+  }
 }
 ```
 
-**Validação de Parâmetros:**
+**Erro de Validação:**
 ```json
 {
-  "detail": [
-    {
-      "loc": ["query", "page"],
-      "msg": "ensure this value is greater than or equal to 1",
-      "type": "value_error.number.not_ge"
-    }
-  ]
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Erro de validação nos dados fornecidos",
+    "details": [
+      {
+        "field": "body.original_url",
+        "message": "Input should be a valid URL",
+        "type": "url_parsing"
+      }
+    ]
+  }
 }
 ```
 
@@ -398,7 +442,7 @@ total_pages = ceil(total / page_size)
 
 | Recurso | Limite |
 |---------|--------|
-| Tamanho do short_code | 8 caracteres |
+| Tamanho do short_code | 6 caracteres (Base 62) |
 | page_size máximo | 100 itens |
 | page mínimo | 1 |
 | Retries de colisão | 5 tentativas |
@@ -451,7 +495,7 @@ curl -X POST "http://localhost:8000/create-url" \
 curl "http://localhost:8000/urls?page=1&page_size=10"
 
 # Obter estatísticas
-curl "http://localhost:8000/stats/abc12345"
+curl "http://localhost:8000/stats/aB3xY9"
 
 # Atualizar URL
 curl -X PATCH "http://localhost:8000/urls/1" \
@@ -473,11 +517,36 @@ FastAPI gera documentação automática:
 
 ---
 
+## Geração de Short Code
+
+### HashGenerator (Base 62)
+
+O sistema utiliza um gerador de hash customizado baseado em **Base 62** para criar códigos curtos únicos.
+
+**Características:**
+- **Alfabeto**: A-Z (26 maiúsculas) + a-z (26 minúsculas) + 0-9 (10 números) = 62 caracteres
+- **Tamanho**: 6 caracteres (configurável entre 1-6)
+- **Combinações**: 62^6 = **56.800.235.584** combinações possíveis
+- **Segurança**: Geração criptograficamente segura usando `secrets.SystemRandom()`
+- **Colisão**: Probabilidade extremamente baixa (1 em 56 bilhões)
+
+**Exemplo de Hash Gerado:**
+```
+aB3xY9  (6 caracteres, Base 62)
+```
+
+**Tratamento de Colisão:**
+- Retry automático até 5 tentativas em caso de colisão
+- Exception `ShortCodeGenerationError` após esgotar tentativas
+- Log de warnings para monitoramento
+
+---
+
 ## Changelog da API
 
 Consulte [CHANGELOG.md](CHANGELOG.md) para histórico de alterações.
 
 ---
 
-**Última Atualização:** 2026-01-22  
-**Versão da API:** 0.0.1
+**Última Atualização:** 2026-01-27  
+**Versão da API:** 0.1.0

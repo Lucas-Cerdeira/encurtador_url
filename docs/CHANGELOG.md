@@ -16,7 +16,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Documento de padrões de versionamento (`docs/VERSIONAMENTO.md`)
 - Estrutura de documentação (changelogs e features)
 - Metadata da API FastAPI (title, version, description)
-- Constantes configuráveis (`MAX_RETRIES=5`, `SHORT_CODE_SIZE=8`)
+- Constantes configuráveis (`MAX_RETRIES=5`, `SHORT_CODE_SIZE=6`)
 - Endpoint para criação de URLs encurtadas (`POST /create-url`)
 - Endpoint para redirecionamento de URLs (`GET /{short_code}`)
 - Endpoint para estatísticas de URLs (`GET /stats/{short_code}`)
@@ -29,3 +29,50 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Corrigido
 - Problema de colisão de short_code não tratado
 - Falta de rollback em caso de erros de banco de dados
+
+---
+
+## [0.1.0] - 2026-01-22
+
+### Adicionado
+- **CRUD Completo de URLs**:
+  - Endpoint `GET /urls` para listar URLs com paginação
+  - Endpoint `PATCH /urls/{id}` para atualizar URL original
+  - Endpoint `DELETE /urls/{id}` para deletar URLs
+- **Configuração via Ambiente**:
+  - Variável `URL_BASE` configurável via arquivo `.env`
+  - Arquivo `.env.example` para referência
+- **Sistema de Exceptions Customizadas**:
+  - `BaseAPIException` como classe base
+  - `URLNotFoundError` (404)
+  - `InvalidPaginationError` (400)
+  - `MissingFieldError` (400)
+  - `ShortCodeGenerationError` (500)
+  - `DatabaseError` (500)
+- **Exception Handlers Centralizados**:
+  - Handler para exceptions customizadas
+  - Handler para erros de validação (Pydantic)
+  - Handler genérico para erros não tratados
+  - Respostas de erro padronizadas em JSON
+- **HashGenerator (Base 62)**:
+  - Módulo `utils/hash_generator.py` para geração de hash
+  - Base 62 (A-Z, a-z, 0-9) = 62 caracteres
+  - Tamanho configurável (1-6 caracteres, padrão: 6)
+  - 56.800.235.584 combinações possíveis com 6 caracteres
+  - Geração criptograficamente segura
+  - Métodos de validação e cálculo de combinações
+- **Testes Unitários Completos**:
+  - 16 testes para HashGenerator
+  - Testes de formato de resposta de erro
+  - Cobertura completa de todos os endpoints
+
+### Modificado
+- **SHORT_CODE_SIZE**: Reduzido de 8 para 6 caracteres
+- **Geração de Hash**: Substituído NanoID por HashGenerator (Base 62)
+- **Tratamento de Erros**: Migrado de HTTPException para exceptions customizadas
+- **Respostas de Erro**: Formato padronizado com `{"error": {"code": ..., "message": ...}}`
+- **URLService**: Agora usa HashGenerator ao invés de nanoid
+
+### Corrigido
+- Exception handlers não registrados nos testes (conftest.py)
+- Documentação desatualizada sobre tamanho do short_code
