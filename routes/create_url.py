@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from schemas.url import URL, URLCreate, URLListResponse, URLUpdate, URLResponse
 from services.url import URLService
 from database import get_db
+from exceptions import MissingFieldError
 
 
 router = APIRouter(
@@ -46,11 +47,7 @@ def update_url(
     - **original_url**: Nova URL original
     """
     if url_update.original_url is None:
-        from fastapi import HTTPException, status
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="É necessário fornecer a nova URL original"
-        )
+        raise MissingFieldError("original_url")
     
     updated_url = URLService().update_url(url_id, url_update.original_url, db)
     return updated_url

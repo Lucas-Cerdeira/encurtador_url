@@ -1,8 +1,14 @@
 from nanoid import generate
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException, status
 from models.url import URL
+from exceptions import (
+    URLNotFoundError,
+    InvalidPaginationError,
+    MissingFieldError,
+    ShortCodeGenerationError,
+    DatabaseError
+)
 import logging
 import os
 
@@ -54,10 +60,7 @@ class URLService:
                 
                 if attempts >= self.MAX_RETRIES:
                     logger.error(f"Falha ao gerar short_code único após {self.MAX_RETRIES} tentativas")
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="Erro ao gerar código único. Tente novamente."
-                    )
+                    raise ShortCodeGenerationError(max_retries=self.MAX_RETRIES)
                 
                 logger.warning(f"Colisão de short_code detectada (tentativa {attempts}/{self.MAX_RETRIES})")
                 # Continua o loop para tentar novamente com novo código
@@ -66,16 +69,10 @@ class URLService:
                 # Rollback para qualquer outro erro inesperado
                 db.rollback()
                 logger.error(f"Erro inesperado ao encurtar URL: {str(e)}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Erro interno ao processar a requisição"
-                )
+                raise DatabaseError(operation="encurtar URL", detail=str(e))
         
         # Se chegou aqui, esgotou todas as tentativas
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Não foi possível gerar um código único. Tente novamente."
-        )
+        raise ShortCodeGenerationError(max_retries=self.MAX_RETRIES)
 
     def get_original_url(self, short_code: str, db: Session) -> str:
         """
@@ -89,12 +86,12 @@ class URLService:
             URL original
             
         Raises:
-            HTTPException: Se a URL não for encontrada ou ocorrer erro ao atualizar
+            URLNotFoundError: Se a URL não for encontrada
         """
         url = db.query(URL).filter(URL.short_code == short_code).first()
 
         if not url:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="URL not found")
+            raise URLNotFoundError(identifier=f"short_code '{short_code}'")
         
         try:
             url.click_count += 1
@@ -112,7 +109,7 @@ class URLService:
         url = db.query(URL).filter(URL.short_code == short_code).first()
 
         if not url:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="URL not found")
+            raise URLNotFoundError(identifier=f"short_code '{short_code}'")
 
         status =  {
             "original_url": url.original_url,
@@ -138,16 +135,10 @@ class URLService:
             HTTPException: Se os parâmetros de paginação forem inválidos
         """
         if page < 1:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Número da página deve ser maior ou igual a 1"
-            )
+            raise InvalidPaginationError("Número da página deve ser maior ou igual a 1")
         
         if page_size < 1 or page_size > 100:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Tamanho da página deve estar entre 1 e 100"
-            )
+            raise InvalidPaginationError("Tamanho da página deve estar entre 1 e 100")
         
         # Conta o total de URLs
         total = db.query(URL).count()
@@ -185,10 +176,7 @@ class URLService:
         url = db.query(URL).filter(URL.id == url_id).first()
         
         if not url:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"URL com ID {url_id} não encontrada"
-            )
+            raise URLNotFoundError(identifier=f"ID {url_id}")
         
         try:
             url.original_url = str(original_url)
@@ -201,10 +189,7 @@ class URLService:
         except Exception as e:
             db.rollback()
             logger.error(f"Erro ao atualizar URL {url_id}: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Erro interno ao atualizar a URL"
-            )
+            raise DatabaseError(operation="atualizar URL", detail=str(e))
 
     def delete_url(self, url_id: int, db: Session) -> dict:
         """
@@ -223,10 +208,7 @@ class URLService:
         url = db.query(URL).filter(URL.id == url_id).first()
         
         if not url:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"URL com ID {url_id} não encontrada"
-            )
+            raise URLNotFoundError(identifier=f"ID {url_id}")
         
         try:
             db.delete(url)
@@ -238,7 +220,4 @@ class URLService:
         except Exception as e:
             db.rollback()
             logger.error(f"Erro ao deletar URL {url_id}: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Erro interno ao deletar a URL"
-            )
+            raise DatabaseError(operation="deletar URL", detail=str(e))

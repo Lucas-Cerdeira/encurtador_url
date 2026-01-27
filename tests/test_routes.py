@@ -174,3 +174,40 @@ def test_delete_url_route_not_found(client):
     response = client.delete("/urls/999")
     
     assert response.status_code == 404
+    data = response.json()
+    assert "error" in data
+    assert "code" in data["error"]
+    assert "message" in data["error"]
+
+
+def test_error_response_format_404(client):
+    """Testa se a resposta de erro 404 segue o formato padronizado."""
+    response = client.get("/stats/inexistente")
+    
+    assert response.status_code == 404
+    data = response.json()
+    assert "error" in data
+    assert data["error"]["code"] == "URL_NOT_FOUND"
+    assert "message" in data["error"]
+
+
+def test_error_response_format_400(client):
+    """Testa se a resposta de erro 400 segue o formato padronizado."""
+    response = client.patch("/urls/1", json={})
+    
+    assert response.status_code == 400
+    data = response.json()
+    assert "error" in data
+    assert data["error"]["code"] == "MISSING_FIELD"
+    assert "message" in data["error"]
+
+
+def test_error_response_format_422(client):
+    """Testa se a resposta de erro 422 (validação) segue o formato padronizado."""
+    response = client.post("/create-url", json={"original_url": "url-invalida"})
+    
+    assert response.status_code == 422
+    data = response.json()
+    assert "error" in data
+    assert data["error"]["code"] == "VALIDATION_ERROR"
+    assert "details" in data["error"]

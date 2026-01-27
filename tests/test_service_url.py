@@ -1,9 +1,14 @@
 import pytest
-from fastapi import HTTPException
 from pydantic import HttpUrl, TypeAdapter
 
 from models.url import URL
 from services.url import URLService
+from exceptions import (
+    URLNotFoundError,
+    InvalidPaginationError,
+    ShortCodeGenerationError,
+    DatabaseError
+)
 
 
 def test_shorten_url_success(db_session, monkeypatch):
@@ -43,10 +48,11 @@ def test_shorten_url_fails_after_max_retries(db_session, monkeypatch):
     monkeypatch.setattr(URLService, "MAX_RETRIES", 1)
     monkeypatch.setattr("services.url.generate", lambda size: "fixed")
 
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(ShortCodeGenerationError) as exc:
         service.shorten_url("https://another.com", db_session)
 
     assert exc.value.status_code == 500
+    assert "1 tentativas" in exc.value.detail
 
 
 def test_get_original_url_increments_clicks(db_session):
@@ -66,10 +72,11 @@ def test_get_original_url_increments_clicks(db_session):
 def test_get_original_url_not_found(db_session):
     service = URLService()
 
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(URLNotFoundError) as exc:
         service.get_original_url("missing", db_session)
 
     assert exc.value.status_code == 404
+    assert "missing" in exc.value.detail
 
 
 def test_get_url_stats(db_session):
@@ -144,23 +151,25 @@ def test_list_urls_pagination(db_session):
 def test_list_urls_invalid_page(db_session):
     service = URLService()
     
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(InvalidPaginationError) as exc:
         service.list_urls(db_session, page=0, page_size=10)
     
     assert exc.value.status_code == 400
+    assert "página" in exc.value.detail.lower()
 
 
 def test_list_urls_invalid_page_size(db_session):
     service = URLService()
     
     # page_size muito grande
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(InvalidPaginationError) as exc:
         service.list_urls(db_session, page=1, page_size=200)
     
     assert exc.value.status_code == 400
+    assert "100" in exc.value.detail
     
     # page_size zero
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(InvalidPaginationError) as exc:
         service.list_urls(db_session, page=1, page_size=0)
     
     assert exc.value.status_code == 400
@@ -183,7 +192,7 @@ def test_update_url_success(db_session):
 def test_update_url_not_found(db_session):
     service = URLService()
     
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(URLNotFoundError) as exc:
         service.update_url(999, "https://newexample.com", db_session)
     
     assert exc.value.status_code == 404
@@ -210,7 +219,7 @@ def test_delete_url_success(db_session):
 def test_delete_url_not_found(db_session):
     service = URLService()
     
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(URLNotFoundError) as exc:
         service.delete_url(999, db_session)
     
     assert exc.value.status_code == 404
