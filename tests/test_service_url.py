@@ -14,7 +14,7 @@ from exceptions import (
 def test_shorten_url_success(db_session, monkeypatch):
     service = URLService()
     monkeypatch.setattr(URLService, "URL_BASE", "http://testserver/")
-    monkeypatch.setattr("services.url.generate", lambda size: "abc123")
+    monkeypatch.setattr(service.hash_generator, "generate", lambda size=6: "abc123")
 
     original_url = TypeAdapter(HttpUrl).validate_python("https://example.com")
     result = service.shorten_url(original_url, db_session)
@@ -33,7 +33,7 @@ def test_shorten_url_retries_on_collision(db_session, monkeypatch):
     service = URLService()
     monkeypatch.setattr(URLService, "URL_BASE", "http://testserver/")
     codes = iter(["fixed", "newone"])
-    monkeypatch.setattr("services.url.generate", lambda size: next(codes))
+    monkeypatch.setattr(service.hash_generator, "generate", lambda size=6: next(codes))
 
     result = service.shorten_url("https://another.com", db_session)
 
@@ -46,7 +46,7 @@ def test_shorten_url_fails_after_max_retries(db_session, monkeypatch):
 
     service = URLService()
     monkeypatch.setattr(URLService, "MAX_RETRIES", 1)
-    monkeypatch.setattr("services.url.generate", lambda size: "fixed")
+    monkeypatch.setattr(service.hash_generator, "generate", lambda size=6: "fixed")
 
     with pytest.raises(ShortCodeGenerationError) as exc:
         service.shorten_url("https://another.com", db_session)

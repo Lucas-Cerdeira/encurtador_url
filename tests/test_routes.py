@@ -16,8 +16,12 @@ class StatsResponse(BaseModel):
 
 
 def test_create_url_route(client, monkeypatch):
+    from utils.hash_generator import HashGenerator
+    
     monkeypatch.setattr(URLService, "URL_BASE", "http://testserver/")
-    monkeypatch.setattr("services.url.generate", lambda size: "abc123")
+    # Mock do método generate do HashGenerator
+    original_generate = HashGenerator.generate
+    monkeypatch.setattr(HashGenerator, "generate", lambda self, size=6: "abc123")
 
     payload = URLCreate(original_url="https://example.com").model_dump(mode="json")
     response = client.post("/create-url", json=payload)

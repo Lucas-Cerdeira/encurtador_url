@@ -1,7 +1,7 @@
-from nanoid import generate
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from models.url import URL
+from utils.hash_generator import HashGenerator
 from exceptions import (
     URLNotFoundError,
     InvalidPaginationError,
@@ -18,7 +18,11 @@ logger = logging.getLogger(__name__)
 class URLService:
     URL_BASE = os.getenv("URL_BASE", "http://localhost:8000/")
     MAX_RETRIES = 5  # Número máximo de tentativas em caso de colisão
-    SHORT_CODE_SIZE = 8  # Tamanho do código curto
+    SHORT_CODE_SIZE = 6  # Tamanho do código curto (Base 62)
+    
+    def __init__(self):
+        """Inicializa o serviço com o gerador de hash."""
+        self.hash_generator = HashGenerator(default_size=self.SHORT_CODE_SIZE)
 
     def shorten_url(self, original_url: str, db: Session) -> str:
         """
@@ -41,8 +45,8 @@ class URLService:
         
         while attempts < self.MAX_RETRIES:
             try:
-                # Gera o short_code
-                short_code = generate(size=self.SHORT_CODE_SIZE)
+                # Gera o short_code usando HashGenerator (Base 62)
+                short_code = self.hash_generator.generate(size=self.SHORT_CODE_SIZE)
                 url_model = URL(original_url=str(original_url), short_code=short_code)
                 
                 # Tenta salvar no banco
