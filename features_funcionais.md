@@ -206,12 +206,12 @@ utils/logging.py
 ```
 
 **Subtarefas:**
-- [ ] Criar endpoint GET /health
-- [ ] Verificar conexão com banco de dados
-- [ ] Verificar conexão com Redis (se implementado)
-- [ ] Configurar logs estruturados (JSON)
-- [ ] Adicionar request_id a todas as requisições
-- [ ] Métricas de performance por endpoint
+- [x] Criar endpoint GET /health
+- [x] Verificar conexão com banco de dados
+- [x] Verificar conexão com Redis (se implementado) - Preparado para futura implementação
+- [x] Configurar logs estruturados (JSON)
+- [x] Adicionar request_id a todas as requisições
+- [x] Métricas de performance por endpoint
 - [ ] Testes do healthcheck
 
 **Dependências:** Nenhuma

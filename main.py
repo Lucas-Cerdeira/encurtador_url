@@ -1,7 +1,14 @@
+from datetime import datetime
+import os
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
 from routes.create_url import router as create_url_router
+from routes.health import router as health_router
 from database import engine, Base
 from models.url import URL  # Import necessário para registrar o modelo
 from __version__ import __version__
@@ -13,19 +20,23 @@ from exceptions import (
     ShortCodeGenerationError,
     DatabaseError
 )
-import logging
-from dotenv import load_dotenv
+from middleware.request_context import RequestContextMiddleware
+from services.health import HealthService
+from utils.logger import setup_logging, get_logger
 
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
 
-# Configurar logging básico
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Configurar logging estruturado
+# Em produção, usar JSON_LOGS=true para formato JSON
+json_logs = os.getenv("JSON_LOGS", "false").lower() == "true"
+log_level = os.getenv("LOG_LEVEL", "INFO")
+setup_logging(level=log_level, json_format=json_logs)
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+
+# Registrar timestamp de início da aplicação
+HealthService.set_start_time(datetime.utcnow())
 
 Base.metadata.create_all(bind=engine)
 
@@ -35,7 +46,27 @@ app = FastAPI(
     description="API para encurtamento de URLs com estatísticas"
 )
 
+# Configurar CORS
+# Permite requisições do frontend (desenvolvimento e produção)
+CORS_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://localhost:3000,http://localhost:8080"
+).split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos os métodos HTTP (GET, POST, PATCH, DELETE, etc)
+    allow_headers=["*"],  # Permite todos os headers
+)
+
+# Middleware de request context (request_id, métricas de performance)
+app.add_middleware(RequestContextMiddleware)
+
+# Rotas da aplicação
 app.include_router(create_url_router)
+app.include_router(health_router)
 
 
 @app.exception_handler(BaseAPIException)
