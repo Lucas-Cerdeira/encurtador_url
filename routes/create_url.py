@@ -2,11 +2,13 @@ from fastapi.routing import APIRouter
 from fastapi.responses import RedirectResponse
 from fastapi import Depends, Query, Request
 from sqlalchemy.orm import Session
-from schemas.url import URL, URLCreate, URLListResponse, URLUpdate, URLResponse
+from schemas.url import URL, URLCreate, URLListResponse, URLUpdate, URLResponse, SortByEnum, OrderEnum
 from services.url import URLService
 from database import get_db
 from exceptions import MissingFieldError
 from middleware.rate_limit import limiter, RateLimitConfig
+from datetime import datetime
+from typing import Optional
 
 
 router = APIRouter(
@@ -31,17 +33,52 @@ def list_urls(
     request: Request,
     page: int = Query(1, ge=1, description="Número da página"),
     page_size: int = Query(10, ge=1, le=100, description="Quantidade de itens por página"),
+    sort_by: SortByEnum = Query(SortByEnum.created_at, description="Campo para ordenação"),
+    order: OrderEnum = Query(OrderEnum.desc, description="Direção da ordenação (asc ou desc)"),
+    search: Optional[str] = Query(None, description="Busca textual na URL original"),
+    min_clicks: Optional[int] = Query(None, ge=0, description="Número mínimo de cliques"),
+    max_clicks: Optional[int] = Query(None, ge=0, description="Número máximo de cliques"),
+    created_after: Optional[datetime] = Query(None, description="Filtrar URLs criadas após esta data (ISO 8601)"),
+    created_before: Optional[datetime] = Query(None, description="Filtrar URLs criadas antes desta data (ISO 8601)"),
     db: Session = Depends(get_db)
 ):
     """
-    Lista todas as URLs encurtadas com paginação.
+    Lista todas as URLs encurtadas com paginação, filtros e ordenação.
     
     Rate limit: 50 requisições por minuto por IP.
     
+    **Paginação:**
     - **page**: Número da página (padrão: 1)
     - **page_size**: Quantidade de itens por página (padrão: 10, máximo: 100)
+    
+    **Ordenação:**
+    - **sort_by**: Campo para ordenação (created_at, click_count, original_url)
+    - **order**: Direção da ordenação (asc, desc)
+    
+    **Filtros:**
+    - **search**: Busca textual na URL original (case-insensitive)
+    - **min_clicks**: Número mínimo de cliques
+    - **max_clicks**: Número máximo de cliques
+    - **created_after**: Filtrar URLs criadas após esta data
+    - **created_before**: Filtrar URLs criadas antes desta data
+    
+    **Exemplo de uso:**
+    ```
+    GET /urls?page=1&page_size=20&sort_by=click_count&order=desc&min_clicks=10
+    ```
     """
-    result = URLService().list_urls(db, page, page_size)
+    result = URLService().list_urls(
+        db=db,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by.value,
+        order=order.value,
+        search=search,
+        min_clicks=min_clicks,
+        max_clicks=max_clicks,
+        created_after=created_after,
+        created_before=created_before
+    )
     return result
 
 

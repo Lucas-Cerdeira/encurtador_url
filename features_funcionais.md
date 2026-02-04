@@ -42,6 +42,17 @@ Features Encurtador URL
 - [x] Validacao de parametros com tratamento de erros (InvalidPaginationError)
 - [x] Testes completos de paginacao (service e rotas)
 
+### Filtros e Ordenacao Avancada
+- [x] Ordenacao configuravel (sort_by: created_at, click_count, original_url)
+- [x] Direcao de ordenacao (order: asc, desc)
+- [x] Busca textual na URL original (search, case-insensitive)
+- [x] Filtro por numero de cliques (min_clicks, max_clicks)
+- [x] Filtro por data de criacao (created_after, created_before)
+- [x] Metadados avancados de paginacao (total_pages, has_next, has_previous)
+- [x] Metadados de filtros aplicados na resposta
+- [x] Validacao robusta de parametros (InvalidFilterError)
+- [x] Testes completos de filtros e ordenacao (35 novos testes)
+
 ---
 
 ## 🎯 ROADMAP - Features Pendentes

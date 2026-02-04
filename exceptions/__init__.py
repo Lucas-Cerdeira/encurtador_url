@@ -5,7 +5,8 @@ from exceptions.api_exceptions import (
     MissingFieldError,
     ShortCodeGenerationError,
     DatabaseError,
-    RateLimitExceededError
+    RateLimitExceededError,
+    InvalidFilterError
 )
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "MissingFieldError",
     "ShortCodeGenerationError",
     "DatabaseError",
-    "RateLimitExceededError"
+    "RateLimitExceededError",
+    "InvalidFilterError"
 ]
