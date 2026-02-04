@@ -12,6 +12,14 @@ O projeto segue uma **arquitetura em camadas** (Layered Architecture) com separa
 
 ```
 ┌─────────────────────────────────────┐
+│         Middleware Layer            │
+│         (middleware/)               │
+│  - Request ID tracking              │
+│  - Métricas de performance          │
+│  - Logging de requisições           │
+└────────────────┬────────────────────┘
+                 │
+┌────────────────▼────────────────────┐
 │         Presentation Layer          │
 │           (routes/)                 │
 │  - Endpoints REST                   │
@@ -25,6 +33,7 @@ O projeto segue uma **arquitetura em camadas** (Layered Architecture) com separa
 │  - Lógica de negócio                │
 │  - Tratamento de erros              │
 │  - Geração de short_code            │
+│  - Health checks                    │
 └────────────────┬────────────────────┘
                  │
 ┌────────────────▼────────────────────┐
@@ -149,6 +158,16 @@ Contém a lógica de negócio da aplicação.
 | `update_url()` | Atualizar URL original |
 | `delete_url()` | Deletar URL |
 
+**HealthService:**
+
+| Método | Responsabilidade |
+|--------|------------------|
+| `check_database()` | Verificar conectividade com banco de dados |
+| `check_redis()` | Verificar conectividade com Redis (preparado) |
+| `get_health()` | Retornar status completo de saúde |
+| `get_readiness()` | Verificar se aplicação está pronta |
+| `get_liveness()` | Verificar se aplicação está viva |
+
 **Padrões Implementados:**
 - **Retry Pattern**: Retry automático em caso de colisão de `short_code`
 - **Error Handling**: Tratamento centralizado de erros
@@ -196,7 +215,99 @@ is_valid = generator.validate("aB3xY9")  # True
 
 ---
 
-### 7. Routes Layer (`routes/`)
+**Logger (Sistema de Logging Estruturado):**
+
+Sistema de logging que suporta formato JSON para produção e formato colorido para desenvolvimento.
+
+**Características:**
+- **JSON Format**: Logs estruturados para ELK, Datadog, CloudWatch
+- **Console Format**: Logs coloridos para desenvolvimento
+- **Request ID**: Tracking de requisições com UUID
+- **Context Variables**: Contexto adicional por requisição
+
+**Componentes:**
+
+| Componente | Descrição |
+|------------|-----------|
+| `JSONFormatter` | Formata logs em JSON estruturado |
+| `ConsoleFormatter` | Formata logs coloridos para console |
+| `setup_logging()` | Configura o sistema de logging |
+| `get_logger()` | Obtém logger para um módulo |
+| `LogContext` | Context manager para adicionar contexto aos logs |
+
+**Exemplo:**
+```python
+from utils.logger import get_logger, LogContext
+
+logger = get_logger(__name__)
+
+# Log simples
+logger.info("Operação realizada")
+
+# Log com contexto
+with LogContext(user_id="123", action="create"):
+    logger.info("Criando recurso")  # Inclui user_id e action
+```
+
+**Formato JSON (produção):**
+```json
+{
+  "timestamp": "2026-02-04T12:00:00Z",
+  "level": "INFO",
+  "logger": "encurtador_url.services.url",
+  "message": "URL criada com sucesso",
+  "request_id": "a1b2c3d4-e5f6-...",
+  "context": {"method": "POST", "path": "/create-url"}
+}
+```
+
+---
+
+### 7. Middleware Layer (`middleware/`)
+
+Middlewares que processam requisições antes de chegarem às rotas.
+
+**RequestContextMiddleware:**
+
+Middleware responsável por observabilidade e rastreamento de requisições.
+
+**Funcionalidades:**
+- **Request ID**: Gera UUID único para cada requisição
+- **Performance Metrics**: Mede tempo de processamento
+- **Headers de Resposta**: Adiciona `X-Request-ID` e `X-Response-Time`
+- **Logging Automático**: Loga início e fim de cada requisição
+- **IP Real**: Suporta `X-Forwarded-For` e `X-Real-IP`
+
+**Headers Adicionados:**
+
+| Header | Descrição | Exemplo |
+|--------|-----------|---------|
+| `X-Request-ID` | ID único da requisição | `a1b2c3d4-e5f6-...` |
+| `X-Response-Time` | Tempo de processamento | `15.32ms` |
+
+**Exemplo de Uso:**
+```python
+from middleware import RequestContextMiddleware
+
+app.add_middleware(RequestContextMiddleware)
+```
+
+**Fluxo:**
+```
+1. Requisição chega
+2. Gera/obtém X-Request-ID
+3. Configura contexto de logging
+4. Log de início (exceto health checks)
+5. Processa requisição
+6. Calcula tempo de resposta
+7. Adiciona headers de rastreabilidade
+8. Log de fim (exceto health checks)
+9. Retorna resposta
+```
+
+---
+
+### 8. Routes Layer (`routes/`)
 
 Define os endpoints da API REST.
 
@@ -407,22 +518,62 @@ URL_BASE = os.getenv("URL_BASE", "http://localhost:8000/")
 
 ### Estratégia
 
-- **Biblioteca:** `logging` (padrão Python)
-- **Níveis:** INFO, WARNING, ERROR
-- **Formato:** `%(asctime)s - %(name)s - %(levelname)s - %(message)s`
+- **Biblioteca:** `logging` (padrão Python) com formatters customizados
+- **Níveis:** DEBUG, INFO, WARNING, ERROR, CRITICAL
+- **Formatos:** JSON (produção) ou Console colorido (desenvolvimento)
+- **Request ID:** Tracking de requisições com UUID
+
+### Configuração via Ambiente
+
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `LOG_LEVEL` | Nível de log | `INFO` |
+| `JSON_LOGS` | Formato JSON | `false` |
 
 ### Eventos Logados
 
 | Evento | Nível |
 |--------|-------|
 | Aplicação iniciada | INFO |
+| Request started | INFO |
+| Request completed | INFO |
 | URL criada | INFO |
 | Listagem de URLs | INFO |
 | URL atualizada | INFO |
 | URL deletada | INFO |
 | Colisão de short_code | WARNING |
+| Request com erro 4xx | WARNING |
 | Erro ao incrementar cliques | ERROR |
 | Erro ao atualizar/deletar | ERROR |
+| Request failed | ERROR |
+
+### Formato JSON (Produção)
+
+```json
+{
+  "timestamp": "2026-02-04T12:00:00Z",
+  "level": "INFO",
+  "logger": "encurtador_url.routes.create_url",
+  "message": "Request completed: POST /create-url - 200 (15.32ms)",
+  "request_id": "a1b2c3d4-e5f6-...",
+  "context": {
+    "method": "POST",
+    "path": "/create-url",
+    "client_ip": "192.168.1.1"
+  },
+  "extra": {
+    "event": "request_complete",
+    "status_code": 200,
+    "response_time_ms": 15.32
+  }
+}
+```
+
+### Formato Console (Desenvolvimento)
+
+```
+2026-02-04 12:00:00 | INFO     [a1b2c3d4] | encurtador_url.middleware | Request completed: POST /create-url - 200 (15.32ms)
+```
 
 ---
 
@@ -531,5 +682,5 @@ Sugestões de ferramentas:
 
 ---
 
-**Última Atualização:** 2026-01-22  
-**Versão:** 0.0.1
+**Última Atualização:** 2026-02-04  
+**Versão:** 0.1.1

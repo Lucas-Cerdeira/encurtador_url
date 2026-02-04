@@ -5,6 +5,35 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [0.1.1] - 2026-02-04
+
+### Adicionado
+- **Healthcheck e Observabilidade Básica**:
+  - Endpoint `GET /health` para verificação completa de saúde
+  - Endpoint `GET /health/ready` para Kubernetes readiness probe
+  - Endpoint `GET /health/live` para Kubernetes liveness probe
+  - Verificação de conectividade com banco de dados
+  - Preparado para verificação de Redis (futura implementação)
+- **Sistema de Logging Estruturado**:
+  - Logs em formato JSON para produção (`JSON_LOGS=true`)
+  - Logs coloridos para desenvolvimento
+  - Request ID único por requisição (UUID)
+  - Contexto de requisição em todos os logs
+- **Middleware de Request Context**:
+  - Geração automática de `X-Request-ID`
+  - Header `X-Response-Time` com tempo de resposta
+  - Métricas de performance por endpoint
+  - Suporte a `X-Forwarded-For` para IP real em proxies
+- **Novas Variáveis de Ambiente**:
+  - `JSON_LOGS` - Ativar logs em formato JSON
+  - `LOG_LEVEL` - Nível de log configurável
+
+### Modificado
+- `main.py` agora usa logging estruturado ao invés de logging básico
+- Middleware de CORS agora usa variável de ambiente `CORS_ORIGINS`
+
+---
+
 ## [0.0.1] - 2024-01-15
 
 ### Adicionado

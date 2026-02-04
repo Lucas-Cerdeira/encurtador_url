@@ -178,7 +178,7 @@ class URL(Base):
 ---
 
 #### 4. Healthcheck e Observabilidade Básica
-**Status:** Não implementado | **Complexidade:** Baixa | **Impacto:** Alto
+**Status:** ✅ Implementado | **Complexidade:** Baixa | **Impacto:** Alto
 
 **Descrição:**
 Endpoint de saúde da aplicação e logs estruturados para monitoramento.
@@ -689,5 +689,5 @@ docker-compose.yml:
 ---
 
 **Última atualização:** 2026-02-04
-**Versão atual:** 0.1.0
+**Versão atual:** 0.1.1
 **Próxima versão planejada:** 0.2.0 (com features críticas)

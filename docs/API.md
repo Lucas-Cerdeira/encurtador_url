@@ -408,6 +408,122 @@ Todos os erros seguem um formato padronizado com código e mensagem:
 
 ---
 
+### 7. Health Check Completo
+
+Verifica o estado de saúde de todos os componentes da aplicação.
+
+**Endpoint:**
+```http
+GET /health
+```
+
+**Response Success:** `200 OK`
+```json
+{
+  "status": "healthy",
+  "version": "0.1.1",
+  "timestamp": "2026-02-04T12:00:00Z",
+  "uptime_seconds": 3600.5,
+  "checks": [
+    {
+      "name": "database",
+      "status": "healthy",
+      "response_time_ms": 2.5,
+      "message": "Database connection successful",
+      "last_check": "2026-02-04T12:00:00Z"
+    }
+  ]
+}
+```
+
+**Response Error:** `503 Service Unavailable`
+```json
+{
+  "status": "unhealthy",
+  "version": "0.1.1",
+  "timestamp": "2026-02-04T12:00:00Z",
+  "uptime_seconds": 3600.5,
+  "checks": [
+    {
+      "name": "database",
+      "status": "unhealthy",
+      "response_time_ms": 5000.0,
+      "message": "Database connection failed: timeout"
+    }
+  ]
+}
+```
+
+**Status possíveis:**
+- `healthy`: Todos os componentes funcionando normalmente
+- `degraded`: Aplicação funcionando com funcionalidade reduzida
+- `unhealthy`: Aplicação não pode processar requisições
+
+---
+
+### 8. Readiness Probe (Kubernetes)
+
+Verifica se a aplicação está pronta para receber tráfego.
+
+**Endpoint:**
+```http
+GET /health/ready
+```
+
+**Response Success:** `200 OK`
+```json
+{
+  "ready": true,
+  "message": "Application ready to receive traffic"
+}
+```
+
+**Response Error:** `503 Service Unavailable`
+```json
+{
+  "ready": false,
+  "message": "Database not available"
+}
+```
+
+**Uso:** Kubernetes usa este endpoint para decidir se deve enviar tráfego para o pod.
+
+---
+
+### 9. Liveness Probe (Kubernetes)
+
+Verifica se a aplicação está viva e respondendo.
+
+**Endpoint:**
+```http
+GET /health/live
+```
+
+**Response Success:** `200 OK`
+```json
+{
+  "alive": true,
+  "timestamp": "2026-02-04T12:00:00Z"
+}
+```
+
+**Uso:** Kubernetes usa este endpoint para decidir se deve reiniciar o pod. Se não responder, o pod é reiniciado.
+
+---
+
+## Headers de Rastreabilidade
+
+Todas as respostas incluem headers de observabilidade:
+
+| Header | Descrição | Exemplo |
+|--------|-----------|---------|
+| `X-Request-ID` | ID único da requisição | `a1b2c3d4-e5f6-...` |
+| `X-Response-Time` | Tempo de processamento | `15.32ms` |
+
+**Nota:** O `X-Request-ID` pode ser enviado pelo cliente. Se não fornecido, é gerado automaticamente.
+
+---
+
 ## Rate Limiting
 
 **Status:** Não implementado
@@ -548,5 +664,5 @@ Consulte [CHANGELOG.md](CHANGELOG.md) para histórico de alterações.
 
 ---
 
-**Última Atualização:** 2026-01-27  
-**Versão da API:** 0.1.0
+**Última Atualização:** 2026-02-04  
+**Versão da API:** 0.1.1

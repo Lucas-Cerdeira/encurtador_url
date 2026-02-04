@@ -27,7 +27,7 @@ Este projeto é um encurtador de URLs que permite:
 - Gerenciar URLs (CRUD completo)
 - Paginação de resultados
 
-**Versão Atual:** 0.0.1
+**Versão Atual:** 0.1.1
 
 ---
 
@@ -56,16 +56,26 @@ encurtador_url/
 │   └── url.py          # Modelo URL
 ├── schemas/            # Schemas Pydantic (validação)
 │   ├── __init__.py
-│   └── url.py          # Schemas de URL
+│   ├── url.py          # Schemas de URL
+│   └── health.py       # Schemas de Health Check
 ├── services/           # Lógica de negócio
 │   ├── __init__.py
-│   └── url.py          # Serviço de URLs
+│   ├── url.py          # Serviço de URLs
+│   └── health.py       # Serviço de Health Check
 ├── utils/              # Utilitários
 │   ├── __init__.py
-│   └── hash_generator.py  # Gerador de hash Base 62
+│   ├── hash_generator.py  # Gerador de hash Base 62
+│   └── logger.py       # Sistema de logging estruturado
 ├── routes/             # Rotas da API
 │   ├── __init__.py
-│   └── create_url.py   # Endpoints de URLs
+│   ├── create_url.py   # Endpoints de URLs
+│   └── health.py       # Endpoints de Health Check
+├── middleware/         # Middlewares da aplicação
+│   ├── __init__.py
+│   └── request_context.py  # Request ID e métricas
+├── exceptions/         # Exceções customizadas
+│   ├── __init__.py
+│   └── api_exceptions.py   # Classes de exceções da API
 ├── tests/              # Testes unitários
 │   ├── __init__.py
 │   ├── conftest.py     # Fixtures do pytest
@@ -73,7 +83,10 @@ encurtador_url/
 │   ├── test_service_url.py  # Testes de serviço
 │   └── test_hash_generator.py  # Testes do gerador de hash
 ├── docs/               # Documentação
-│   ├── CHANGELOG.md
+│   ├── API.md          # Documentação da API
+│   ├── ARQUITETURA.md  # Arquitetura do projeto
+│   ├── CHANGELOG.md    # Histórico de mudanças
+│   ├── PAGINACAO.md    # Documentação de paginação
 │   └── VERSIONAMENTO.md
 ├── .env.example        # Exemplo de variáveis de ambiente
 ├── main.py             # Ponto de entrada da aplicação
@@ -125,11 +138,23 @@ cp .env.example .env
 ```env
 # URL base do encurtador
 URL_BASE=http://localhost:8000/
+
+# Logging
+LOG_LEVEL=INFO
+JSON_LOGS=false
+
+# CORS
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
 ### Configurações Disponíveis
 
-- `URL_BASE`: URL base retornada nas URLs encurtadas (padrão: `http://localhost:8000/`)
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `URL_BASE` | URL base retornada nas URLs encurtadas | `http://localhost:8000/` |
+| `LOG_LEVEL` | Nível de log (DEBUG, INFO, WARNING, ERROR) | `INFO` |
+| `JSON_LOGS` | Ativar logs em formato JSON (para produção) | `false` |
+| `CORS_ORIGINS` | Origens permitidas para CORS (separadas por vírgula) | `http://localhost:5173,...` |
 
 ---
 
@@ -285,6 +310,63 @@ DELETE /urls/{url_id}
 ```json
 {
   "message": "URL 1 deletada com sucesso"
+}
+```
+
+---
+
+#### 7. Health Check Completo
+```http
+GET /health
+```
+
+**Response:** `200 OK`
+```json
+{
+  "status": "healthy",
+  "version": "0.1.1",
+  "timestamp": "2026-02-04T12:00:00Z",
+  "uptime_seconds": 3600.5,
+  "checks": [
+    {
+      "name": "database",
+      "status": "healthy",
+      "response_time_ms": 2.5,
+      "message": "Database connection successful"
+    }
+  ]
+}
+```
+
+**Status possíveis:** `healthy`, `degraded`, `unhealthy`
+
+---
+
+#### 8. Readiness Probe (Kubernetes)
+```http
+GET /health/ready
+```
+
+**Response:** `200 OK`
+```json
+{
+  "ready": true,
+  "message": "Application ready to receive traffic"
+}
+```
+
+---
+
+#### 9. Liveness Probe (Kubernetes)
+```http
+GET /health/live
+```
+
+**Response:** `200 OK`
+```json
+{
+  "alive": true,
+  "timestamp": "2026-02-04T12:00:00Z"
 }
 ```
 
@@ -453,7 +535,7 @@ Este projeto segue **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
 - **MINOR**: Novas funcionalidades compatíveis
 - **PATCH**: Correções de bugs
 
-**Versão Atual:** `0.0.1`
+**Versão Atual:** `0.1.1`
 
 Consulte [VERSIONAMENTO.md](docs/VERSIONAMENTO.md) e [CHANGELOG.md](docs/CHANGELOG.md) para mais detalhes.
 
@@ -463,21 +545,31 @@ Consulte [VERSIONAMENTO.md](docs/VERSIONAMENTO.md) e [CHANGELOG.md](docs/CHANGEL
 
 Consulte [features_funcionais.md](features_funcionais.md) para o roadmap completo.
 
+**Crítica (Produção):**
+- Autenticação e Autorização (JWT)
+- Rate Limiting (proteção contra abuso)
+- Índices de Banco de Dados
+
 **Alta Prioridade:**
-- Tratamento de erros padronizado
-- Customização de short_code (6 caracteres)
-- Módulo gerador de ID com Base64
+- Migração para PostgreSQL
+- Cache Layer (Redis)
+- Custom Short Codes (aliases)
 
 **Média Prioridade:**
+- Analytics Detalhado (cliques por período, device, referrer)
 - Expiração/TTL de links
-- Métricas avançadas (cliques por período, user-agent, referrer)
-- Rate limiting
-- Healthcheck endpoint
+- Validação de URLs maliciosas
 
 **Baixa Prioridade:**
-- Dashboard de estatísticas
-- QR Code para URLs
-- Blacklist/allowlist de domínios
+- QR Code Generator
+- Preview de Destino
+- Dashboard Web
+
+**✅ Já Implementado:**
+- Tratamento de erros padronizado
+- Módulo HashGenerator (Base 62)
+- Healthcheck e Observabilidade Básica
+- Logs estruturados (JSON)
 
 ---
 
