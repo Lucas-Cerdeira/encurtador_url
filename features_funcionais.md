@@ -97,14 +97,15 @@ Sistema completo de autenticação para controlar acesso às URLs e operações.
   - Relacionamento: `user = relationship("User", back_populates="urls")`
   - Migration para adicionar coluna (nullable=True inicialmente)
   
-- [ ] **1.4** - Criar schemas Pydantic (`schemas/user.py`)
-  - `UserCreate` (email, password)
+- [x] **1.4** - Criar schemas Pydantic (`schemas/user.py`) ✅ **[Commit: 06b06bb]**
+  - `UserCreate` (email, password com min 8 chars)
   - `UserLogin` (email, password)
-  - `UserResponse` (id, email, created_at, is_active)
+  - `UserResponse` (id, email, created_at, is_active, is_verified)
   - `Token` (access_token, token_type)
   - `TokenData` (email: Optional[str])
+  - Adiciona `email-validator` para validação de EmailStr
 
-**Estimativa:** 4-6 horas | **Tempo Real:** ~3 horas
+**Estimativa:** 4-6 horas | **Tempo Real:** ~4 horas
 
 ---
 
