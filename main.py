@@ -10,8 +10,10 @@ from slowapi.errors import RateLimitExceeded
 
 from routes.create_url import router as create_url_router
 from routes.health import router as health_router
+from routes.auth import router as auth_router
 from database import engine, Base
 from models.url import URL  # Import necessário para registrar o modelo
+from models.user import User  # Import necessário para registrar o modelo User
 from __version__ import __version__
 from exceptions import (
     BaseAPIException,
@@ -77,6 +79,7 @@ app.add_middleware(RequestContextMiddleware)
 # Rotas da aplicação
 app.include_router(create_url_router)
 app.include_router(health_router)
+app.include_router(auth_router)
 
 
 @app.exception_handler(BaseAPIException)
