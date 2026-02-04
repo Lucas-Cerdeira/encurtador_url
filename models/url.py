@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, DateTime, Index
+from sqlalchemy import Column, Integer, String, DateTime, Index, ForeignKey
+from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
 
@@ -11,6 +12,10 @@ class URL(Base):
     original_url = Column(String, index=True)  # O site real (ex: "https://google.com")
     click_count = Column(Integer, default=0, index=True)  # Contador de visitas (índice para ordenação)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)  # Data de criação (índice para ordenação)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # FK para User (nullable para retrocompatibilidade)
+
+    # Relacionamento com User
+    user = relationship("User", back_populates="urls")
 
     # Índices compostos para queries otimizadas
     __table_args__ = (
