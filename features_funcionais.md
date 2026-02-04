@@ -132,7 +132,7 @@ dependencies:
 ---
 
 #### 3. Índices de Banco de Dados
-**Status:** Não implementado | **Complexidade:** Baixa | **Impacto:** Alto
+**Status:** ✅ Implementado | **Complexidade:** Baixa | **Impacto:** Alto
 
 **Descrição:**
 Adicionar índices nos campos mais consultados para otimizar performance.
@@ -165,10 +165,12 @@ class URL(Base):
 ```
 
 **Subtarefas:**
-- [ ] Criar migration para adicionar índices
-- [ ] Índice único em short_code
-- [ ] Índice em user_id (para filtro por usuário)
-- [ ] Índice em created_at (para ordenação)
+- [x] Criar migration para adicionar índices
+- [x] Índice único em short_code
+- [x] Índice em click_count (para ordenação por popularidade)
+- [x] Índice em created_at (para ordenação)
+- [x] Índices compostos para ordenação DESC
+- [ ] Índice em user_id (aguardando implementação de autenticação)
 - [ ] Benchmark antes/depois
 - [ ] Documentar ganhos de performance
 

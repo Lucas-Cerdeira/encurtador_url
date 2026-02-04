@@ -24,6 +24,14 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
   - Header `X-Response-Time` com tempo de resposta
   - Métricas de performance por endpoint
   - Suporte a `X-Forwarded-For` para IP real em proxies
+- **Índices de Banco de Dados**:
+  - Índice único em `short_code` para busca rápida
+  - Índice em `original_url` para queries
+  - Índice em `click_count` para ordenação por popularidade
+  - Índice em `created_at` para ordenação cronológica
+  - Índices compostos DESC para `created_at` e `click_count`
+  - Migration para PostgreSQL (`database/migrations/001_add_indexes.py`)
+  - Suporte automático para SQLite via SQLAlchemy
 - **Novas Variáveis de Ambiente**:
   - `JSON_LOGS` - Ativar logs em formato JSON
   - `LOG_LEVEL` - Nível de log configurável
@@ -31,6 +39,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Modificado
 - `main.py` agora usa logging estruturado ao invés de logging básico
 - Middleware de CORS agora usa variável de ambiente `CORS_ORIGINS`
+- `models/url.py` com índices otimizados para performance
 
 ---
 
