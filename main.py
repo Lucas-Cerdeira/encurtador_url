@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from slowapi.errors import RateLimitExceeded
 
 from routes.create_url import router as create_url_router
 from routes.health import router as health_router
@@ -18,9 +19,11 @@ from exceptions import (
     InvalidPaginationError,
     MissingFieldError,
     ShortCodeGenerationError,
-    DatabaseError
+    DatabaseError,
+    RateLimitExceededError
 )
 from middleware.request_context import RequestContextMiddleware
+from middleware.rate_limit import limiter, rate_limit_exceeded_handler
 from services.health import HealthService
 from utils.logger import setup_logging, get_logger
 
@@ -45,6 +48,13 @@ app = FastAPI(
     version=__version__,
     description="API para encurtamento de URLs com estatísticas"
 )
+
+# Configurar Rate Limiter
+# Adiciona estado do limiter à aplicação (necessário para slowapi)
+app.state.limiter = limiter
+
+# Handler customizado para erros de rate limit (429 Too Many Requests)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # Configurar CORS
 # Permite requisições do frontend (desenvolvimento e produção)

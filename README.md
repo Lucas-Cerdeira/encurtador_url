@@ -145,6 +145,15 @@ JSON_LOGS=false
 
 # CORS
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# Redis (opcional - para rate limiting em produção)
+# Se não configurado, usa armazenamento em memória (desenvolvimento)
+REDIS_URL=redis://localhost:6379
+
+# Rate Limiting (opcional - configuração de limites)
+RATE_LIMIT_CREATE_URL=10/minute
+RATE_LIMIT_REDIRECT=100/minute
+RATE_LIMIT_DEFAULT=50/minute
 ```
 
 ### Configurações Disponíveis
@@ -155,6 +164,24 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 | `LOG_LEVEL` | Nível de log (DEBUG, INFO, WARNING, ERROR) | `INFO` |
 | `JSON_LOGS` | Ativar logs em formato JSON (para produção) | `false` |
 | `CORS_ORIGINS` | Origens permitidas para CORS (separadas por vírgula) | `http://localhost:5173,...` |
+| `REDIS_URL` | URL do Redis para rate limiting (opcional) | `memory://` (memória) |
+| `RATE_LIMIT_CREATE_URL` | Limite para criação de URLs | `10/minute` |
+| `RATE_LIMIT_REDIRECT` | Limite para redirecionamentos | `100/minute` |
+| `RATE_LIMIT_DEFAULT` | Limite padrão para outros endpoints | `50/minute` |
+
+### Redis (Opcional)
+
+**Desenvolvimento:** Não é necessário configurar - usa memória automaticamente.
+
+**Produção:** Configure `REDIS_URL` apontando para seu servidor Redis.
+
+**Formato da URL:**
+```
+redis://localhost:6379                    # Local sem senha
+redis://:senha@localhost:6379            # Local com senha
+redis://user:senha@host:6379/0          # Com usuário, senha e database
+redis://default:abc123@redis.railway.app:6379  # Exemplo de cloud
+```
 
 ---
 
@@ -381,6 +408,7 @@ GET /health/live
 | 400 | Requisição inválida |
 | 404 | Recurso não encontrado |
 | 422 | Erro de validação |
+| 429 | Limite de requisições excedido (Rate Limit) |
 | 500 | Erro interno do servidor |
 
 ---
@@ -546,8 +574,8 @@ Consulte [VERSIONAMENTO.md](docs/VERSIONAMENTO.md) e [CHANGELOG.md](docs/CHANGEL
 Consulte [features_funcionais.md](features_funcionais.md) para o roadmap completo.
 
 **Crítica (Produção):**
+- ✅ Rate Limiting (proteção contra abuso) - **Implementado**
 - Autenticação e Autorização (JWT)
-- Rate Limiting (proteção contra abuso)
 - Índices de Banco de Dados
 
 **Alta Prioridade:**

@@ -105,3 +105,18 @@ class DatabaseError(BaseAPIException):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             error_code="DATABASE_ERROR"
         )
+
+
+class RateLimitExceededError(BaseAPIException):
+    """
+    Exception lançada quando o limite de requisições é excedido.
+    
+    Status Code: 429 Too Many Requests
+    """
+    
+    def __init__(self, detail: str = "Limite de requisições excedido. Tente novamente mais tarde."):
+        super().__init__(
+            detail=detail,
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            error_code="RATE_LIMIT_EXCEEDED"
+        )

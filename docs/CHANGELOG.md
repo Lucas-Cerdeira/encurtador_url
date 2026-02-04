@@ -32,14 +32,31 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
   - Índices compostos DESC para `created_at` e `click_count`
   - Migration para PostgreSQL (`database/migrations/001_add_indexes.py`)
   - Suporte automático para SQLite via SQLAlchemy
+- **Rate Limiting e Proteção contra Abuso**:
+  - Middleware de rate limiting usando `slowapi`
+  - Limites configuráveis por endpoint:
+    - `POST /create-url`: 10 req/min por IP
+    - `GET /{short_code}`: 100 req/min por IP
+    - Outros endpoints: 50 req/min por IP
+  - Suporte a Redis para produção (opcional)
+  - Armazenamento em memória para desenvolvimento (padrão)
+  - Resposta 429 (Too Many Requests) padronizada
+  - Exception `RateLimitExceededError` para tratamento de erros
+  - Detecção de IP real considerando proxies reversos
 - **Novas Variáveis de Ambiente**:
   - `JSON_LOGS` - Ativar logs em formato JSON
   - `LOG_LEVEL` - Nível de log configurável
+  - `REDIS_URL` - URL do Redis para rate limiting (opcional)
+  - `RATE_LIMIT_CREATE_URL` - Limite para criação de URLs (padrão: "10/minute")
+  - `RATE_LIMIT_REDIRECT` - Limite para redirecionamentos (padrão: "100/minute")
+  - `RATE_LIMIT_DEFAULT` - Limite padrão (padrão: "50/minute")
 
 ### Modificado
 - `main.py` agora usa logging estruturado ao invés de logging básico
 - Middleware de CORS agora usa variável de ambiente `CORS_ORIGINS`
 - `models/url.py` com índices otimizados para performance
+- Todos os endpoints agora têm rate limiting aplicado
+- `exceptions/api_exceptions.py` adicionada exceção `RateLimitExceededError`
 
 ---
 

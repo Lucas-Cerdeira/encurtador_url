@@ -94,7 +94,7 @@ routes/auth.py
 ---
 
 #### 2. Rate Limiting e Proteção contra Abuso
-**Status:** Não implementado | **Complexidade:** Média | **Impacto:** Crítico
+**Status:** ✅ Implementado | **Complexidade:** Média | **Impacto:** Crítico
 
 **Descrição:**
 Limitar número de requisições por IP/usuário para prevenir spam e ataques.
@@ -107,7 +107,7 @@ Limitar número de requisições por IP/usuário para prevenir spam e ataques.
 **Arquitetura:**
 ```
 middleware/rate_limit.py
-├── Redis para cache de contadores
+├── Suporte a Redis (produção) ou memória (desenvolvimento)
 ├── Limites por endpoint:
 │   ├── POST /create-url: 10 req/min por IP
 │   ├── GET /{short_code}: 100 req/min por IP
@@ -115,18 +115,29 @@ middleware/rate_limit.py
 └── Resposta 429 (Too Many Requests)
 
 dependencies:
-- redis-py ou slowapi (rate limiter para FastAPI)
+- slowapi==0.1.9 (rate limiter para FastAPI)
+- limits==3.12.0 (backend de limites)
 ```
 
 **Subtarefas:**
-- [ ] Instalar e configurar Redis
-- [ ] Implementar middleware de rate limiting
-- [ ] Configurar limites por endpoint
-- [ ] Tratamento de erro 429 padronizado
+- [x] Instalar slowapi e limits
+- [x] Implementar middleware de rate limiting
+- [x] Configurar limites por endpoint
+- [x] Tratamento de erro 429 padronizado
+- [x] Suporte a Redis (via variável REDIS_URL) - Preparado para produção
+- [x] Limites configuráveis via variáveis de ambiente
 - [ ] Testes de rate limiting
-- [ ] Documentar limites na API
 
-**Dependências:** Redis (cache)
+**Variáveis de ambiente:**
+- `REDIS_URL`: URL do Redis (opcional, usa memória se não configurado)
+  - **Desenvolvimento:** Não precisa configurar - usa memória automaticamente
+  - **Produção:** Configure com URL do seu servidor Redis
+  - **Formato:** `redis://localhost:6379` ou `redis://user:senha@host:6379/0`
+- `RATE_LIMIT_CREATE_URL`: Limite para criação (padrão: "10/minute")
+- `RATE_LIMIT_REDIRECT`: Limite para redirecionamento (padrão: "100/minute")
+- `RATE_LIMIT_DEFAULT`: Limite padrão (padrão: "50/minute")
+
+**Dependências:** Redis (opcional para produção)
 **Estimativa:** 2-3 dias
 
 ---

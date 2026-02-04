@@ -4,7 +4,8 @@ from exceptions.api_exceptions import (
     InvalidPaginationError,
     MissingFieldError,
     ShortCodeGenerationError,
-    DatabaseError
+    DatabaseError,
+    RateLimitExceededError
 )
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "InvalidPaginationError",
     "MissingFieldError",
     "ShortCodeGenerationError",
-    "DatabaseError"
+    "DatabaseError",
+    "RateLimitExceededError"
 ]

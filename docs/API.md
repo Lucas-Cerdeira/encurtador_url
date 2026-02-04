@@ -318,6 +318,7 @@ DELETE /urls/{url_id}
 | 400 | Bad Request | Requisição malformada ou inválida |
 | 404 | Not Found | Recurso não encontrado |
 | 422 | Unprocessable Entity | Erro de validação de dados |
+| 429 | Too Many Requests | Limite de requisições excedido |
 | 500 | Internal Server Error | Erro interno do servidor |
 
 ---
@@ -365,6 +366,7 @@ Todos os erros seguem um formato padronizado com código e mensagem:
 | `SHORT_CODE_GENERATION_FAILED` | Falha ao gerar código único | 500 |
 | `DATABASE_ERROR` | Erro no banco de dados | 500 |
 | `VALIDATION_ERROR` | Erro de validação de dados | 422 |
+| `RATE_LIMIT_EXCEEDED` | Limite de requisições excedido | 429 |
 | `INTERNAL_SERVER_ERROR` | Erro interno não tratado | 500 |
 
 ### Tipos Comuns de Erro
@@ -526,9 +528,72 @@ Todas as respostas incluem headers de observabilidade:
 
 ## Rate Limiting
 
-**Status:** Não implementado
+**Status:** ✅ Implementado
 
-Feature futura para proteção contra abuso.
+A API implementa rate limiting para proteger contra abusos e ataques DDoS.
+
+### Limites por Endpoint
+
+| Endpoint | Limite | Descrição |
+|----------|--------|-----------|
+| `POST /create-url` | 10 req/min por IP | Criação de URLs |
+| `GET /{short_code}` | 100 req/min por IP | Redirecionamentos |
+| Outros endpoints | 50 req/min por IP | Listagem, atualização, estatísticas |
+| Health checks | Sem limite | `/health`, `/health/ready`, `/health/live` |
+
+### Resposta de Erro 429
+
+Quando o limite é excedido, a API retorna:
+
+**Status:** `429 Too Many Requests`
+
+**Response:**
+```json
+{
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Limite de requisições excedido. Tente novamente mais tarde.",
+    "retry_after_seconds": 60
+  }
+}
+```
+
+**Headers:**
+- `Retry-After`: Segundos até poder tentar novamente
+- `X-RateLimit-Limit`: Limite configurado
+
+### Configuração
+
+Os limites podem ser configurados via variáveis de ambiente:
+
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `RATE_LIMIT_CREATE_URL` | Limite para criação | `10/minute` |
+| `RATE_LIMIT_REDIRECT` | Limite para redirecionamento | `100/minute` |
+| `RATE_LIMIT_DEFAULT` | Limite padrão | `50/minute` |
+
+### Redis (Opcional para Produção)
+
+**Desenvolvimento:** Não é necessário configurar - usa memória automaticamente.
+
+**Produção:** Configure `REDIS_URL` apontando para seu servidor Redis.
+
+**Formato da URL:**
+```
+redis://localhost:6379                    # Local sem senha
+redis://:senha@localhost:6379            # Local com senha
+redis://user:senha@host:6379/0          # Com usuário, senha e database
+redis://default:abc123@redis.railway.app:6379  # Exemplo de cloud
+```
+
+**Configuração:**
+```bash
+# No arquivo .env
+REDIS_URL=redis://localhost:6379
+
+# Ou via variável de ambiente
+export REDIS_URL="redis://localhost:6379"
+```
 
 ---
 

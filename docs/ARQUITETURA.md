@@ -17,6 +17,7 @@ O projeto segue uma **arquitetura em camadas** (Layered Architecture) com separa
 │  - Request ID tracking              │
 │  - Métricas de performance          │
 │  - Logging de requisições           │
+│  - Rate Limiting                    │
 └────────────────┬────────────────────┘
                  │
 ┌────────────────▼────────────────────┐
@@ -307,6 +308,85 @@ app.add_middleware(RequestContextMiddleware)
 
 ---
 
+**RateLimitMiddleware:**
+
+Middleware responsável por limitar requisições por IP para proteção contra abusos.
+
+**Funcionalidades:**
+- **Limites por Endpoint**: Diferentes limites para diferentes rotas
+- **Armazenamento**: Redis (produção) ou memória (desenvolvimento)
+- **IP Detection**: Suporta proxies reversos (`X-Forwarded-For`, `X-Real-IP`)
+- **Resposta 429**: Retorna erro padronizado quando limite é excedido
+
+**Limites Configurados:**
+
+| Endpoint | Limite | Descrição |
+|----------|--------|-----------|
+| `POST /create-url` | 10 req/min | Criação de URLs |
+| `GET /{short_code}` | 100 req/min | Redirecionamentos |
+| Outros | 50 req/min | Endpoints gerais |
+| Health checks | Sem limite | `/health/*` |
+
+**Backend de Armazenamento:**
+
+- **Desenvolvimento (padrão):** Armazenamento em memória (`memory://`)
+- **Produção (opcional):** Redis (`redis://...`) - configure via `REDIS_URL`
+
+**Configuração:**
+
+```python
+# middleware/rate_limit.py
+limiter = Limiter(
+    key_func=get_client_ip,
+    default_limits=[RateLimitConfig.DEFAULT],
+    storage_uri=os.getenv("REDIS_URL", "memory://"),
+    strategy="fixed-window"
+)
+```
+
+**Variáveis de Ambiente:**
+
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `REDIS_URL` | URL do Redis (opcional) | `memory://` |
+| `RATE_LIMIT_CREATE_URL` | Limite para criação | `10/minute` |
+| `RATE_LIMIT_REDIRECT` | Limite para redirecionamento | `100/minute` |
+| `RATE_LIMIT_DEFAULT` | Limite padrão | `50/minute` |
+
+**Formato da URL do Redis:**
+
+```
+redis://localhost:6379                    # Local sem senha
+redis://:senha@localhost:6379            # Local com senha
+redis://user:senha@host:6379/0          # Com usuário, senha e database
+redis://default:abc123@redis.railway.app:6379  # Exemplo de cloud
+```
+
+**Exemplo de Uso:**
+
+```python
+from middleware.rate_limit import limiter, RateLimitConfig
+
+@router.post("/create-url")
+@limiter.limit(RateLimitConfig.CREATE_URL)
+def create_url(request: Request, ...):
+    ...
+```
+
+**Resposta de Erro 429:**
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Limite de requisições excedido. Tente novamente mais tarde.",
+    "retry_after_seconds": 60
+  }
+}
+```
+
+---
+
 ### 8. Routes Layer (`routes/`)
 
 Define os endpoints da API REST.
@@ -502,6 +582,13 @@ def client(app):
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
 | `URL_BASE` | URL base para URLs encurtadas | `http://localhost:8000/` |
+| `LOG_LEVEL` | Nível de log (DEBUG, INFO, WARNING, ERROR) | `INFO` |
+| `JSON_LOGS` | Ativar logs em formato JSON | `false` |
+| `CORS_ORIGINS` | Origens permitidas para CORS | `http://localhost:5173,...` |
+| `REDIS_URL` | URL do Redis para rate limiting (opcional) | `memory://` |
+| `RATE_LIMIT_CREATE_URL` | Limite para criação de URLs | `10/minute` |
+| `RATE_LIMIT_REDIRECT` | Limite para redirecionamentos | `100/minute` |
+| `RATE_LIMIT_DEFAULT` | Limite padrão | `50/minute` |
 
 ### Carregamento
 
@@ -596,7 +683,7 @@ URL_BASE = os.getenv("URL_BASE", "http://localhost:8000/")
 
 ### Melhorias Futuras
 
-- [ ] Cache de URLs mais acessadas (Redis)
+- [ ] Cache de URLs mais acessadas (Redis) - Redis já disponível para rate limiting
 - [ ] Índice composto para queries complexas
 - [ ] Batch operations para bulk insert
 - [ ] Read replicas para escalabilidade
@@ -610,14 +697,14 @@ URL_BASE = os.getenv("URL_BASE", "http://localhost:8000/")
 ✅ Validação de entrada (Pydantic)
 ✅ SQL Injection (proteção via ORM)
 ✅ Variáveis de ambiente para configuração
+✅ Rate limiting (proteção contra DDoS)
+✅ CORS configurado
 
 ### Futuro
 
-- [ ] Rate limiting (proteção contra DDoS)
 - [ ] Autenticação e autorização
 - [ ] HTTPS obrigatório
 - [ ] Blacklist de domínios maliciosos
-- [ ] CORS configurado
 
 ---
 
