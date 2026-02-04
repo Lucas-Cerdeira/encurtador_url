@@ -77,22 +77,22 @@ Sistema completo de autenticação para controlar acesso às URLs e operações.
 
 ### 📋 Plano de Implementação (Subtarefas)
 
-#### **Fase 1: Modelo de Dados e Dependências** (Dia 1)
+#### **Fase 1: Modelo de Dados e Dependências** (Dia 1) ✅ **CONCLUÍDO**
 **Objetivo:** Preparar a base de dados e instalar dependências
 
-- [ ] **1.1** - Instalar dependências
-  - `python-jose[cryptography]` (JWT)
-  - `passlib[bcrypt]` (hash de senha)
+- [x] **1.1** - Instalar dependências ✅ **[Commit: fcb41c8]**
+  - `python-jose[cryptography]` (JWT) - v3.5.0
+  - `passlib[bcrypt]` (hash de senha) - v1.7.4
   - `python-multipart` (form data)
   - Atualizar `requirements.txt`
   
-- [ ] **1.2** - Criar modelo User (`models/user.py`)
+- [x] **1.2** - Criar modelo User (`models/user.py`) ✅ **[Commit: c81696c]**
   - Campos: id, email, password_hash, created_at, is_active, is_verified
   - Unique constraint em email
   - Índice em email
   - Métodos: `verify_password()`, `set_password()`
   
-- [ ] **1.3** - Adicionar relacionamento User-URL
+- [x] **1.3** - Adicionar relacionamento User-URL ✅ **[Commit: 7b907c9]**
   - Adicionar `user_id` (FK) no modelo URL
   - Relacionamento: `user = relationship("User", back_populates="urls")`
   - Migration para adicionar coluna (nullable=True inicialmente)
@@ -104,7 +104,7 @@ Sistema completo de autenticação para controlar acesso às URLs e operações.
   - `Token` (access_token, token_type)
   - `TokenData` (email: Optional[str])
 
-**Estimativa:** 4-6 horas
+**Estimativa:** 4-6 horas | **Tempo Real:** ~3 horas
 
 ---
 
