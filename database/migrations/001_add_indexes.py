@@ -1,5 +1,5 @@
 """
-Migration: Adicionar índices de performance
+Migration: Adicionar índices de performance (PostgreSQL)
 Data: 2026-02-04
 Descrição: Adiciona índices otimizados para melhorar performance de queries
 
@@ -10,10 +10,13 @@ Descrição: Adiciona índices otimizados para melhorar performance de queries
 - idx_urls_created_at: Para filtros por data
 
 Nota: Os índices em short_code e original_url já existem via Column(..., index=True)
+
+IMPORTANTE: Este script é destinado apenas para PostgreSQL (banco de produção).
+Para testes com SQLite, os índices são criados automaticamente pelo SQLAlchemy.
 """
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 import os
 import sys
 
@@ -28,11 +31,20 @@ def get_engine():
     return create_engine(SQLALCHEMY_DATABASE_URL)
 
 
-def index_exists(conn, index_name: str) -> bool:
-    """Verifica se um índice já existe no banco SQLite."""
+def is_postgresql(engine) -> bool:
+    """Verifica se o banco de dados é PostgreSQL."""
+    return engine.dialect.name == "postgresql"
+
+
+def index_exists(conn, index_name: str, schema: str = "public") -> bool:
+    """Verifica se um índice já existe no PostgreSQL."""
     result = conn.execute(
-        text("SELECT name FROM sqlite_master WHERE type='index' AND name=:name"),
-        {"name": index_name}
+        text("""
+            SELECT 1 FROM pg_indexes 
+            WHERE schemaname = :schema 
+            AND indexname = :index_name
+        """),
+        {"schema": schema, "index_name": index_name}
     )
     return result.fetchone() is not None
 
@@ -48,18 +60,26 @@ def create_index_if_not_exists(conn, index_name: str, create_sql: str) -> bool:
         conn.commit()
         print(f"  ✅ Índice '{index_name}' criado com sucesso!")
         return True
-    except OperationalError as e:
+    except (OperationalError, ProgrammingError) as e:
         print(f"  ❌ Erro ao criar índice '{index_name}': {e}")
         return False
 
 
 def run_migration():
     """Executa a migration para criar os índices."""
-    print("\n🚀 Iniciando migration: Adicionar índices de performance\n")
+    print("\n🚀 Iniciando migration: Adicionar índices de performance (PostgreSQL)\n")
     
     engine = get_engine()
     
-    # Lista de índices a serem criados
+    # Validar que é PostgreSQL
+    if not is_postgresql(engine):
+        print(f"  ⚠️  Este script é apenas para PostgreSQL.")
+        print(f"  ℹ️  Banco detectado: {engine.dialect.name}")
+        print(f"  ℹ️  Para SQLite, os índices são criados automaticamente pelo SQLAlchemy.")
+        print("\n❌ Migration abortada.\n")
+        return
+    
+    # Lista de índices a serem criados (sintaxe PostgreSQL)
     indexes = [
         (
             "idx_urls_created_at",
@@ -97,9 +117,16 @@ def run_migration():
 
 def rollback_migration():
     """Reverte a migration removendo os índices criados."""
-    print("\n⏪ Revertendo migration: Remover índices de performance\n")
+    print("\n⏪ Revertendo migration: Remover índices de performance (PostgreSQL)\n")
     
     engine = get_engine()
+    
+    # Validar que é PostgreSQL
+    if not is_postgresql(engine):
+        print(f"  ⚠️  Este script é apenas para PostgreSQL.")
+        print(f"  ℹ️  Banco detectado: {engine.dialect.name}")
+        print("\n❌ Rollback abortado.\n")
+        return
     
     indexes_to_drop = [
         "idx_urls_created_at",
@@ -112,10 +139,11 @@ def rollback_migration():
         for index_name in indexes_to_drop:
             if index_exists(conn, index_name):
                 try:
-                    conn.execute(text(f"DROP INDEX {index_name}"))
+                    # PostgreSQL suporta IF EXISTS, mas verificamos antes para feedback
+                    conn.execute(text(f"DROP INDEX IF EXISTS {index_name}"))
                     conn.commit()
                     print(f"  ✅ Índice '{index_name}' removido!")
-                except OperationalError as e:
+                except (OperationalError, ProgrammingError) as e:
                     print(f"  ❌ Erro ao remover índice '{index_name}': {e}")
             else:
                 print(f"  ⏭️  Índice '{index_name}' não existe, pulando...")
@@ -126,7 +154,9 @@ def rollback_migration():
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="Migration para índices de banco de dados")
+    parser = argparse.ArgumentParser(
+        description="Migration para índices de banco de dados (PostgreSQL apenas)"
+    )
     parser.add_argument(
         "--rollback",
         action="store_true",
