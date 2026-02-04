@@ -62,7 +62,8 @@ Features Encurtador URL
 > **Objetivo:** Tornar a aplicação segura e pronta para uso em produção
 
 #### 1. Autenticação e Autorização
-**Status:** Não implementado | **Complexidade:** Alta | **Impacto:** Crítico
+**Status:** Em desenvolvimento | **Complexidade:** Alta | **Impacto:** Crítico
+**Branch:** `feature/autenticacao`
 
 **Descrição:**
 Sistema completo de autenticação para controlar acesso às URLs e operações.
@@ -72,35 +73,230 @@ Sistema completo de autenticação para controlar acesso às URLs e operações.
 - Impossível rastrear quem criou cada URL
 - Sem controle de acesso ou quotas por usuário
 
-**Arquitetura:**
+---
+
+### 📋 Plano de Implementação (Subtarefas)
+
+#### **Fase 1: Modelo de Dados e Dependências** (Dia 1)
+**Objetivo:** Preparar a base de dados e instalar dependências
+
+- [ ] **1.1** - Instalar dependências
+  - `python-jose[cryptography]` (JWT)
+  - `passlib[bcrypt]` (hash de senha)
+  - `python-multipart` (form data)
+  - Atualizar `requirements.txt`
+  
+- [ ] **1.2** - Criar modelo User (`models/user.py`)
+  - Campos: id, email, password_hash, created_at, is_active, is_verified
+  - Unique constraint em email
+  - Índice em email
+  - Métodos: `verify_password()`, `set_password()`
+  
+- [ ] **1.3** - Adicionar relacionamento User-URL
+  - Adicionar `user_id` (FK) no modelo URL
+  - Relacionamento: `user = relationship("User", back_populates="urls")`
+  - Migration para adicionar coluna (nullable=True inicialmente)
+  
+- [ ] **1.4** - Criar schemas Pydantic (`schemas/user.py`)
+  - `UserCreate` (email, password)
+  - `UserLogin` (email, password)
+  - `UserResponse` (id, email, created_at, is_active)
+  - `Token` (access_token, token_type)
+  - `TokenData` (email: Optional[str])
+
+**Estimativa:** 4-6 horas
+
+---
+
+#### **Fase 2: Autenticação JWT** (Dia 2)
+**Objetivo:** Implementar geração e validação de tokens JWT
+
+- [ ] **2.1** - Criar utilitário de senha (`utils/security.py`)
+  - `hash_password(password: str) -> str`
+  - `verify_password(plain_password: str, hashed_password: str) -> bool`
+  - Configurar bcrypt rounds (default: 12)
+  
+- [ ] **2.2** - Criar utilitário JWT (`utils/jwt.py`)
+  - `create_access_token(data: dict, expires_delta: Optional[timedelta]) -> str`
+  - `decode_access_token(token: str) -> TokenData`
+  - Configurar SECRET_KEY via env (gerar com secrets.token_urlsafe)
+  - Configurar ALGORITHM (HS256)
+  - Configurar ACCESS_TOKEN_EXPIRE_MINUTES (30 padrão)
+  
+- [ ] **2.3** - Criar dependency para autenticação (`dependencies/auth.py`)
+  - `get_current_user(token: str = Depends(oauth2_scheme)) -> User`
+  - `get_current_active_user(user: User = Depends(get_current_user)) -> User`
+  - OAuth2PasswordBearer(tokenUrl="/auth/login")
+  
+- [ ] **2.4** - Adicionar variáveis de ambiente
+  - `SECRET_KEY` (obrigatório, sem default)
+  - `ALGORITHM` (default: HS256)
+  - `ACCESS_TOKEN_EXPIRE_MINUTES` (default: 30)
+  - Documentar no `.env.example`
+
+**Estimativa:** 4-5 horas
+
+---
+
+#### **Fase 3: Rotas de Autenticação** (Dia 2-3)
+**Objetivo:** Criar endpoints de registro e login
+
+- [ ] **3.1** - Criar service de usuário (`services/user.py`)
+  - `create_user(user_data: UserCreate, db: Session) -> User`
+  - `get_user_by_email(email: str, db: Session) -> Optional[User]`
+  - `authenticate_user(email: str, password: str, db: Session) -> Optional[User]`
+  - Validações: email único, senha forte (min 8 chars)
+  
+- [ ] **3.2** - Criar rotas de autenticação (`routes/auth.py`)
+  - `POST /auth/register` - Criar conta
+  - `POST /auth/login` - Login (retorna token)
+  - `GET /auth/me` - Dados do usuário logado (protegida)
+  - Rate limit especial: 5 req/min para login/register
+  
+- [ ] **3.3** - Adicionar exception customizada
+  - `CredentialsError` (401 Unauthorized)
+  - `EmailAlreadyExistsError` (409 Conflict)
+  - `WeakPasswordError` (400 Bad Request)
+  
+- [ ] **3.4** - Registrar router no main.py
+  - `app.include_router(auth_router)`
+  - Tag: "Authentication"
+
+**Estimativa:** 5-6 horas
+
+---
+
+#### **Fase 4: Proteção de Rotas Existentes** (Dia 3-4)
+**Objetivo:** Adicionar autenticação opcional aos endpoints
+
+- [ ] **4.1** - Atualizar URLService
+  - Adicionar `user_id` opcional ao `shorten_url()`
+  - Validar propriedade em `update_url()` e `delete_url()`
+  - Método `is_owner(url_id: int, user_id: int, db: Session) -> bool`
+  
+- [ ] **4.2** - Proteger rotas de modificação (PATCH/DELETE /urls/{id})
+  - Adicionar `current_user = Depends(get_current_user)` 
+  - Verificar se user é dono antes de modificar
+  - Retornar 403 Forbidden se não for dono
+  
+- [ ] **4.3** - Tornar autenticação opcional para criação
+  - POST /create-url pode ser anônimo OU autenticado
+  - Se autenticado, salvar user_id
+  - `current_user: Optional[User] = Depends(get_current_user_optional)`
+  
+- [ ] **4.4** - Atualizar listagem para filtrar por usuário
+  - GET /urls?my_urls=true (apenas URLs do usuário logado)
+  - Requer autenticação para usar filtro
+
+**Estimativa:** 4-5 horas
+
+---
+
+#### **Fase 5: Testes Automatizados** (Dia 4-5)
+**Objetivo:** Garantir qualidade e cobertura de testes
+
+- [ ] **5.1** - Criar fixtures de teste (`tests/conftest.py`)
+  - `test_user` (usuário de teste)
+  - `test_user_token` (token válido)
+  - `authenticated_client` (cliente com auth)
+  
+- [ ] **5.2** - Testes do modelo User (`tests/test_user_model.py`)
+  - Criar usuário com senha hasheada
+  - Verificar senha correta/incorreta
+  - Validar unique constraint de email
+  
+- [ ] **5.3** - Testes de autenticação (`tests/test_auth.py`)
+  - Registro com sucesso
+  - Registro com email duplicado
+  - Login com credenciais válidas
+  - Login com credenciais inválidas
+  - Acesso a /auth/me com token válido
+  - Acesso a /auth/me sem token (401)
+  - Token expirado (401)
+  
+- [ ] **5.4** - Testes de autorização (`tests/test_authorization.py`)
+  - Deletar URL própria (sucesso)
+  - Deletar URL de outro usuário (403)
+  - Atualizar URL própria (sucesso)
+  - Atualizar URL de outro usuário (403)
+  - Listar apenas URLs próprias
+
+**Estimativa:** 6-8 horas
+
+---
+
+#### **Fase 6: Documentação e Ajustes Finais** (Dia 5)
+**Objetivo:** Documentar e refinar a implementação
+
+- [ ] **6.1** - Atualizar documentação da API (`docs/API.md`)
+  - Seção de autenticação
+  - Exemplos de uso com Bearer token
+  - Códigos de erro (401, 403, 409)
+  
+- [ ] **6.2** - Atualizar arquivo ARQUITETURA.md
+  - Adicionar seção de autenticação
+  - Diagrama de fluxo de login
+  - Explicar JWT e segurança
+  
+- [ ] **6.3** - Criar migration para produção
+  - Script para popular user_id em URLs existentes (NULL ou user padrão)
+  - Documentar como rodar migration
+  
+- [ ] **6.4** - Validar todos os testes
+  - Rodar suite completa
+  - Verificar cobertura (mínimo 80%)
+  - Corrigir warnings e deprecations
+
+**Estimativa:** 3-4 horas
+
+---
+
+### 📊 Resumo de Esforço
+
+| Fase | Descrição | Tempo Estimado | Complexidade |
+|------|-----------|----------------|--------------|
+| 1 | Modelo de Dados | 4-6h | Média |
+| 2 | JWT e Segurança | 4-5h | Média |
+| 3 | Rotas de Auth | 5-6h | Média |
+| 4 | Proteção de Rotas | 4-5h | Alta |
+| 5 | Testes | 6-8h | Média |
+| 6 | Documentação | 3-4h | Baixa |
+| **TOTAL** | **26-34 horas** | **3-5 dias** | **Alta** |
+
+---
+
+### 🔧 Variáveis de Ambiente Necessárias
+
+```bash
+# .env
+SECRET_KEY=<gerar_com_secrets.token_urlsafe(32)>
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
-models/user.py
-├── User (id, email, password_hash, created_at, is_active)
-└── Relacionamento: User hasMany URLs
 
-middleware/auth.py
-├── JWT token generation/validation
-├── Password hashing (bcrypt)
-└── Protected route decorator
+---
 
-routes/auth.py
-├── POST /register (criar conta)
-├── POST /login (gerar token)
-├── POST /logout (invalidar token)
-└── GET /me (dados do usuário logado)
+### 📦 Dependências a Instalar
+
+```bash
+pip install python-jose[cryptography] passlib[bcrypt] python-multipart
 ```
 
-**Subtarefas:**
-- [ ] Criar modelo User com hash de senha
-- [ ] Implementar JWT tokens (access + refresh)
-- [ ] Adicionar user_id foreign key em URL model
-- [ ] Criar middleware de autenticação
-- [ ] Proteger endpoints (apenas dono pode editar/deletar)
-- [ ] Endpoints de registro e login
-- [ ] Testes de autenticação e autorização
+---
+
+### ⚠️ Observações Importantes
+
+1. **SECRET_KEY**: Nunca commitar a chave secreta. Deve ser gerada em produção.
+2. **Backward Compatibility**: URLs existentes ficam sem user_id (NULL), funcionam normalmente.
+3. **Autenticação Opcional**: POST /create-url não requer auth para não quebrar uso atual.
+4. **Rate Limiting**: Login/register tem limite mais restrito (5 req/min).
+5. **Token Expiration**: Considerar refresh token em versão futura.
+
+---
 
 **Dependências:** Nenhuma
-**Estimativa:** 3-5 dias
+**Estimativa Total:** 3-5 dias (26-34 horas)
+**Branch:** `feature/autenticacao`
 
 ---
 
