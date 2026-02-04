@@ -6,7 +6,13 @@ from exceptions.api_exceptions import (
     ShortCodeGenerationError,
     DatabaseError,
     RateLimitExceededError,
-    InvalidFilterError
+    InvalidFilterError,
+    # Exceptions de Autenticação
+    CredentialsError,
+    EmailAlreadyExistsError,
+    WeakPasswordError,
+    UserNotFoundError,
+    InactiveUserError,
 )
 
 __all__ = [
@@ -17,5 +23,11 @@ __all__ = [
     "ShortCodeGenerationError",
     "DatabaseError",
     "RateLimitExceededError",
-    "InvalidFilterError"
+    "InvalidFilterError",
+    # Exceptions de Autenticação
+    "CredentialsError",
+    "EmailAlreadyExistsError",
+    "WeakPasswordError",
+    "UserNotFoundError",
+    "InactiveUserError",
 ]

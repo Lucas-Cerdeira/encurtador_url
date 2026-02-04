@@ -135,3 +135,86 @@ class InvalidFilterError(BaseAPIException):
             status_code=status.HTTP_400_BAD_REQUEST,
             error_code="INVALID_FILTER"
         )
+
+
+# =============================================================================
+# Exceptions de Autenticação
+# =============================================================================
+
+
+class CredentialsError(BaseAPIException):
+    """
+    Exception lançada quando as credenciais são inválidas.
+    
+    Status Code: 401 Unauthorized
+    """
+    
+    def __init__(self, detail: str = "Credenciais inválidas"):
+        super().__init__(
+            detail=detail,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            error_code="INVALID_CREDENTIALS"
+        )
+
+
+class EmailAlreadyExistsError(BaseAPIException):
+    """
+    Exception lançada quando o email já está cadastrado.
+    
+    Status Code: 409 Conflict
+    """
+    
+    def __init__(self, email: str = None):
+        detail = "Email já cadastrado"
+        if email:
+            detail = f"O email '{email}' já está cadastrado"
+        super().__init__(
+            detail=detail,
+            status_code=status.HTTP_409_CONFLICT,
+            error_code="EMAIL_ALREADY_EXISTS"
+        )
+
+
+class WeakPasswordError(BaseAPIException):
+    """
+    Exception lançada quando a senha não atende aos requisitos mínimos.
+    
+    Status Code: 400 Bad Request
+    """
+    
+    def __init__(self, detail: str = "Senha muito fraca. Use no mínimo 8 caracteres."):
+        super().__init__(
+            detail=detail,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error_code="WEAK_PASSWORD"
+        )
+
+
+class UserNotFoundError(BaseAPIException):
+    """
+    Exception lançada quando o usuário não é encontrado.
+    
+    Status Code: 404 Not Found
+    """
+    
+    def __init__(self, detail: str = "Usuário não encontrado"):
+        super().__init__(
+            detail=detail,
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="USER_NOT_FOUND"
+        )
+
+
+class InactiveUserError(BaseAPIException):
+    """
+    Exception lançada quando a conta do usuário está inativa.
+    
+    Status Code: 403 Forbidden
+    """
+    
+    def __init__(self, detail: str = "Conta de usuário inativa"):
+        super().__init__(
+            detail=detail,
+            status_code=status.HTTP_403_FORBIDDEN,
+            error_code="INACTIVE_USER"
+        )

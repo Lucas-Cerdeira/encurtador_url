@@ -109,61 +109,69 @@ Sistema completo de autenticação para controlar acesso às URLs e operações.
 
 ---
 
-#### **Fase 2: Autenticação JWT** (Dia 2)
+#### **Fase 2: Autenticação JWT** (Dia 2) ✅ **CONCLUÍDO**
 **Objetivo:** Implementar geração e validação de tokens JWT
 
-- [ ] **2.1** - Criar utilitário de senha (`utils/security.py`)
+- [x] **2.1** - Criar utilitário de senha (`utils/security.py`) ✅
   - `hash_password(password: str) -> str`
   - `verify_password(plain_password: str, hashed_password: str) -> bool`
   - Configurar bcrypt rounds (default: 12)
   
-- [ ] **2.2** - Criar utilitário JWT (`utils/jwt.py`)
+- [x] **2.2** - Criar utilitário JWT (`utils/jwt.py`) ✅
   - `create_access_token(data: dict, expires_delta: Optional[timedelta]) -> str`
   - `decode_access_token(token: str) -> TokenData`
   - Configurar SECRET_KEY via env (gerar com secrets.token_urlsafe)
   - Configurar ALGORITHM (HS256)
   - Configurar ACCESS_TOKEN_EXPIRE_MINUTES (30 padrão)
   
-- [ ] **2.3** - Criar dependency para autenticação (`dependencies/auth.py`)
+- [x] **2.3** - Criar dependency para autenticação (`dependencies/auth.py`) ✅
   - `get_current_user(token: str = Depends(oauth2_scheme)) -> User`
   - `get_current_active_user(user: User = Depends(get_current_user)) -> User`
+  - `get_current_user_optional()` para rotas com auth opcional
   - OAuth2PasswordBearer(tokenUrl="/auth/login")
   
-- [ ] **2.4** - Adicionar variáveis de ambiente
+- [x] **2.4** - Adicionar variáveis de ambiente ✅
   - `SECRET_KEY` (obrigatório, sem default)
   - `ALGORITHM` (default: HS256)
   - `ACCESS_TOKEN_EXPIRE_MINUTES` (default: 30)
   - Documentar no `.env.example`
 
-**Estimativa:** 4-5 horas
+**Estimativa:** 4-5 horas | **Tempo Real:** ~4 horas
 
 ---
 
-#### **Fase 3: Rotas de Autenticação** (Dia 2-3)
+#### **Fase 3: Rotas de Autenticação** (Dia 2-3) ✅ **CONCLUÍDO**
 **Objetivo:** Criar endpoints de registro e login
 
-- [ ] **3.1** - Criar service de usuário (`services/user.py`)
+- [x] **3.1** - Criar service de usuário (`services/user.py`) ✅
   - `create_user(user_data: UserCreate, db: Session) -> User`
   - `get_user_by_email(email: str, db: Session) -> Optional[User]`
   - `authenticate_user(email: str, password: str, db: Session) -> Optional[User]`
   - Validações: email único, senha forte (min 8 chars)
   
-- [ ] **3.2** - Criar rotas de autenticação (`routes/auth.py`)
+- [x] **3.2** - Criar rotas de autenticação (`routes/auth.py`) ✅
   - `POST /auth/register` - Criar conta
   - `POST /auth/login` - Login (retorna token)
   - `GET /auth/me` - Dados do usuário logado (protegida)
   - Rate limit especial: 5 req/min para login/register
   
-- [ ] **3.3** - Adicionar exception customizada
+- [x] **3.3** - Adicionar exception customizada ✅
   - `CredentialsError` (401 Unauthorized)
   - `EmailAlreadyExistsError` (409 Conflict)
   - `WeakPasswordError` (400 Bad Request)
+  - `UserNotFoundError` (404 Not Found)
+  - `InactiveUserError` (403 Forbidden)
   
-- [ ] **3.4** - Registrar router no main.py
+- [x] **3.4** - Registrar router no main.py ✅
   - `app.include_router(auth_router)`
   - Tag: "Authentication"
 
-**Estimativa:** 5-6 horas
+- [x] **3.5** - Criar testes ✅
+  - `test_user_service.py` - 24 testes do UserService
+  - `test_auth_routes.py` - 20 testes das rotas de auth
+  - Cobertura completa de casos de sucesso e erro
+
+**Estimativa:** 5-6 horas | **Tempo Real:** ~5 horas
 
 ---
 
