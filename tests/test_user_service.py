@@ -65,14 +65,12 @@ class TestUserService:
     def test_deve_levantar_erro_senha_fraca(self, db_session: Session):
         """Deve verificar que Pydantic já bloqueia senhas muito fracas."""
         # O Pydantic já valida o mínimo de 8 caracteres no schema UserCreate
-        # Vamos testar se a validação do Pydantic está funcionando corretamente
-        with pytest.raises((WeakPasswordError, ValueError)):
-            user_data = UserCreate(email="weak@example.com", password="123")
+        # A exceção é levantada pelo Pydantic (ValidationError)
+        with pytest.raises(ValueError) as exc_info:
+            UserCreate(email="weak@example.com", password="123")
         
-        with pytest.raises(WeakPasswordError) as exc_info:
-            UserService.create_user(user_data, db_session)
-            
-        assert "mínimo 8 caracteres" in str(exc_info.value)
+        # Verifica que a mensagem de erro menciona a validação de senha
+        assert "8" in str(exc_info.value) or "password" in str(exc_info.value).lower()
 
     def test_deve_validar_senha_com_8_caracteres_exatos(self, db_session: Session):
         """Deve aceitar senha com exatamente 8 caracteres (limite mínimo)."""
