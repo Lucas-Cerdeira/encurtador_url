@@ -1,0 +1,14 @@
+{
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "chat.tools.terminal.autoApprove": {
+        "pytest": true,
+        "/^python -m pytest \\. -v 2>&1 \\| head -300$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

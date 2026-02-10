@@ -210,3 +210,7 @@ __marimo__/
 __init__.py
 **/__init__.py
 launch.py
+# Database files
+*.db
+*.sqlite
+*.sqlite3
